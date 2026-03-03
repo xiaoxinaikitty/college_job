@@ -27,6 +27,8 @@ class StudentHomeViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _interviews = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reviews = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reports = <Map<String, dynamic>>[];
+  final Map<int, Map<String, dynamic>> _interviewConfirmStates =
+      <int, Map<String, dynamic>>{};
 
   int get userId => payload.userId;
   int get tabIndex => _tabIndex;
@@ -141,6 +143,7 @@ class StudentHomeViewModel extends ChangeNotifier {
   Future<void> createResume({
     required String title,
     required String contentJson,
+    double? completionScore,
   }) async {
     await _runBusy(() async {
       await _service.createResume(
@@ -148,7 +151,26 @@ class StudentHomeViewModel extends ChangeNotifier {
         userId: userId,
         title: title,
         resumeContentJson: contentJson,
-        completionScore: 70,
+        completionScore: completionScore ?? 70,
+      );
+      await loadResumes();
+    });
+  }
+
+  Future<void> updateResume({
+    required int resumeId,
+    required String title,
+    required String contentJson,
+    double? completionScore,
+  }) async {
+    await _runBusy(() async {
+      await _service.updateResume(
+        baseUrl: baseUrl,
+        userId: userId,
+        resumeId: resumeId,
+        title: title,
+        resumeContentJson: contentJson,
+        completionScore: completionScore ?? 70,
       );
       await loadResumes();
     });
@@ -233,6 +255,36 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
+    final interviewIds =
+        _interviews.map((item) => _toInt(item['id'])).whereType<int>().toSet();
+    _interviewConfirmStates
+        .removeWhere((interviewId, _) => !interviewIds.contains(interviewId));
+    notifyListeners();
+  }
+
+  Map<String, dynamic>? interviewConfirmState(int interviewId) {
+    return _interviewConfirmStates[interviewId];
+  }
+
+  Future<void> submitInterviewConfirmation({
+    required int interviewId,
+    required String action,
+    String? note,
+    DateTime? expectedRescheduleAt,
+  }) async {
+    final normalizedAction = action.trim().toLowerCase();
+    if (normalizedAction != 'confirm' &&
+        normalizedAction != 'reschedule' &&
+        normalizedAction != 'decline') {
+      throw ArgumentError('不支持的面试确认动作: $action');
+    }
+
+    _interviewConfirmStates[interviewId] = <String, dynamic>{
+      'action': normalizedAction,
+      'note': note?.trim(),
+      'expectedRescheduleAt': expectedRescheduleAt?.toIso8601String(),
+      'submittedAt': DateTime.now().toIso8601String(),
+    };
     notifyListeners();
   }
 

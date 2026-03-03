@@ -38,6 +38,7 @@ public class StudentService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final InterviewScheduleRepository interviewScheduleRepository;
+    private final InterviewStudentConfirmRepository interviewStudentConfirmRepository;
     private final OfferRepository offerRepository;
     private final OfferStatusLogRepository offerStatusLogRepository;
     private final EnterpriseReviewRepository enterpriseReviewRepository;
@@ -47,6 +48,9 @@ public class StudentService {
 
     private static final long MAX_RESUME_FILE_SIZE = 10L * 1024 * 1024;
     private static final Set<String> ALLOWED_RESUME_EXTENSIONS = Set.of("pdf", "doc", "docx");
+    private static final int INTERVIEW_CONFIRM_ACTION_CONFIRM = 1;
+    private static final int INTERVIEW_CONFIRM_ACTION_RESCHEDULE = 2;
+    private static final int INTERVIEW_CONFIRM_ACTION_DECLINE = 3;
 
     public StudentService(
             UserRepository userRepository,
@@ -57,6 +61,7 @@ public class StudentService {
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             InterviewScheduleRepository interviewScheduleRepository,
+            InterviewStudentConfirmRepository interviewStudentConfirmRepository,
             OfferRepository offerRepository,
             OfferStatusLogRepository offerStatusLogRepository,
             EnterpriseReviewRepository enterpriseReviewRepository,
@@ -72,6 +77,7 @@ public class StudentService {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.interviewScheduleRepository = interviewScheduleRepository;
+        this.interviewStudentConfirmRepository = interviewStudentConfirmRepository;
         this.offerRepository = offerRepository;
         this.offerStatusLogRepository = offerStatusLogRepository;
         this.enterpriseReviewRepository = enterpriseReviewRepository;
@@ -396,6 +402,74 @@ public class StudentService {
         return interviewScheduleRepository.findByStudentUserId(studentUserId);
     }
 
+    @Transactional
+    public Map<String, Object> submitInterviewConfirm(
+            Long studentUserId,
+            Long interviewId,
+            InterviewConfirmRequest request
+    ) {
+        validateStudent(studentUserId);
+        InterviewSchedule interview = interviewScheduleRepository.findByIdAndStudentUserId(interviewId, studentUserId)
+                .orElseThrow(() -> new BizException(ErrorCode.DATA_NOT_FOUND, "面试安排不存在"));
+
+        if (interview.getStatus() != null && (interview.getStatus() == 3 || interview.getStatus() == 4)) {
+            throw new BizException(ErrorCode.APPLICATION_STATUS_INVALID, "当前面试状态不可确认");
+        }
+
+        Integer actionType = parseInterviewActionType(request.getAction());
+        String note = normalize(request.getNote());
+        LocalDateTime expectedRescheduleAt = request.getExpectedRescheduleAt();
+
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_RESCHEDULE) && expectedRescheduleAt == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "申请改期时必须填写期望时间");
+        }
+        if (!Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_RESCHEDULE)) {
+            expectedRescheduleAt = null;
+        }
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_DECLINE) && note == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "无法参加时必须填写原因");
+        }
+
+        InterviewStudentConfirm confirm = interviewStudentConfirmRepository
+                .findByInterviewIdAndStudentUserId(interviewId, studentUserId)
+                .orElseGet(InterviewStudentConfirm::new);
+        if (confirm.getId() == null) {
+            confirm.setInterviewId(interviewId);
+            confirm.setStudentUserId(studentUserId);
+        }
+        confirm.setActionType(actionType);
+        confirm.setNote(note);
+        confirm.setExpectedRescheduleAt(expectedRescheduleAt);
+        confirm.setSubmittedAt(LocalDateTime.now());
+        confirm = interviewStudentConfirmRepository.save(confirm);
+
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_CONFIRM)
+                && Objects.equals(interview.getStatus(), 1)) {
+            interview.setStatus(2);
+            interviewScheduleRepository.save(interview);
+        }
+
+        return buildInterviewConfirmView(confirm, interview.getStatus());
+    }
+
+    public Map<String, Object> interviewConfirmDetail(Long studentUserId, Long interviewId) {
+        validateStudent(studentUserId);
+        InterviewSchedule interview = interviewScheduleRepository.findByIdAndStudentUserId(interviewId, studentUserId)
+                .orElseThrow(() -> new BizException(ErrorCode.DATA_NOT_FOUND, "面试安排不存在"));
+
+        Optional<InterviewStudentConfirm> confirmOpt = interviewStudentConfirmRepository
+                .findByInterviewIdAndStudentUserId(interviewId, studentUserId);
+        if (confirmOpt.isEmpty()) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("interviewId", interviewId);
+            empty.put("studentUserId", studentUserId);
+            empty.put("submitted", false);
+            empty.put("interviewStatus", interview.getStatus());
+            return empty;
+        }
+        return buildInterviewConfirmView(confirmOpt.get(), interview.getStatus());
+    }
+
     public List<Offer> listOffers(Long studentUserId) {
         validateStudent(studentUserId);
         return offerRepository.findByStudentUserIdOrderByCreatedAtDesc(studentUserId);
@@ -583,6 +657,69 @@ public class StudentService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Integer parseInterviewActionType(String action) {
+        String normalized = normalize(action);
+        if (normalized == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "操作类型不能为空");
+        }
+        String raw = normalized.toLowerCase(Locale.ROOT);
+        if ("confirm".equals(raw)) {
+            return INTERVIEW_CONFIRM_ACTION_CONFIRM;
+        }
+        if ("reschedule".equals(raw)) {
+            return INTERVIEW_CONFIRM_ACTION_RESCHEDULE;
+        }
+        if ("decline".equals(raw)) {
+            return INTERVIEW_CONFIRM_ACTION_DECLINE;
+        }
+        throw new BizException(ErrorCode.PARAM_ERROR, "action 仅支持 confirm / reschedule / decline");
+    }
+
+    private String interviewActionCode(Integer actionType) {
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_CONFIRM)) {
+            return "confirm";
+        }
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_RESCHEDULE)) {
+            return "reschedule";
+        }
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_DECLINE)) {
+            return "decline";
+        }
+        return "unknown";
+    }
+
+    private String interviewActionLabel(Integer actionType) {
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_CONFIRM)) {
+            return "确认参加";
+        }
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_RESCHEDULE)) {
+            return "申请改期";
+        }
+        if (Objects.equals(actionType, INTERVIEW_CONFIRM_ACTION_DECLINE)) {
+            return "无法参加";
+        }
+        return "未知";
+    }
+
+    private Map<String, Object> buildInterviewConfirmView(
+            InterviewStudentConfirm confirm,
+            Integer interviewStatus
+    ) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("confirmId", confirm.getId());
+        data.put("interviewId", confirm.getInterviewId());
+        data.put("studentUserId", confirm.getStudentUserId());
+        data.put("actionType", confirm.getActionType());
+        data.put("action", interviewActionCode(confirm.getActionType()));
+        data.put("actionLabel", interviewActionLabel(confirm.getActionType()));
+        data.put("note", confirm.getNote());
+        data.put("expectedRescheduleAt", confirm.getExpectedRescheduleAt());
+        data.put("submittedAt", confirm.getSubmittedAt());
+        data.put("interviewStatus", interviewStatus);
+        data.put("submitted", true);
+        return data;
     }
 
     private void saveApplicationLog(

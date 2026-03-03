@@ -200,10 +200,52 @@ X-User-Id: 1
 #### 3.5.1 我的面试安排
 - `GET /api/student/interviews`
 
-#### 3.5.2 我的Offer列表
+#### 3.5.2 提交面试确认操作
+- `POST /api/student/interviews/{interviewId}/confirm`
+
+请求体：
+```json
+{
+  "action": "confirm",
+  "note": "我会准时参加",
+  "expectedRescheduleAt": null
+}
+```
+
+或（申请改期）：
+```json
+{
+  "action": "reschedule",
+  "note": "当天有课程冲突，申请改期",
+  "expectedRescheduleAt": "2026-03-06T15:00:00"
+}
+```
+
+或（无法参加）：
+```json
+{
+  "action": "decline",
+  "note": "已签约其他实习，无法参加",
+  "expectedRescheduleAt": null
+}
+```
+
+说明：
+- `action` 仅支持 `confirm / reschedule / decline`
+- `reschedule` 必须传 `expectedRescheduleAt`
+- `decline` 必须填写 `note`
+
+#### 3.5.3 查询我的面试确认详情
+- `GET /api/student/interviews/{interviewId}/confirm`
+
+说明：
+- 若未提交过确认，返回 `submitted=false`
+- 若已提交，返回 `action/actionLabel/note/submittedAt` 等信息
+
+#### 3.5.4 我的Offer列表
 - `GET /api/student/offers`
 
-#### 3.5.3 处理Offer（接受/拒绝）
+#### 3.5.5 处理Offer（接受/拒绝）
 - `POST /api/student/offers/{offerId}/decision`
 
 请求体：

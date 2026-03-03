@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../student_interviews_page.dart';
+import '../student_resume_editor_page.dart';
 import '../../../viewmodels/student_home_view_model.dart';
 
 class StudentProfileModulePage extends StatelessWidget {
@@ -20,6 +22,7 @@ class StudentProfileModulePage extends StatelessWidget {
         await Future.wait([
           vm.loadResumes(),
           vm.loadOffers(),
+          vm.loadInterviews(),
           vm.loadReviews(),
           vm.loadReports(),
         ]);
@@ -29,6 +32,7 @@ class StudentProfileModulePage extends StatelessWidget {
         children: [
           _resumeCard(context),
           _offerCard(),
+          _interviewCard(context),
           _reviewReportCard(context),
         ],
       ),
@@ -62,6 +66,8 @@ class StudentProfileModulePage extends StatelessWidget {
               final id = _toInt(resume['id']);
               final isDefault = (_toInt(resume['isDefault']) ?? 0) == 1;
               return ListTile(
+                onTap:
+                    id == null ? null : () => _editResume(context, resume, id),
                 contentPadding: EdgeInsets.zero,
                 title: Text(_toText(resume['title'])),
                 subtitle: Text(isDefault ? '默认简历' : '普通简历'),
@@ -157,6 +163,64 @@ class StudentProfileModulePage extends StatelessWidget {
     );
   }
 
+  Widget _interviewCard(BuildContext context) {
+    final previews = vm.interviews.take(2).toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('面试安排',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(width: 8),
+                Text(
+                  '${vm.interviews.length} 条',
+                  style:
+                      const TextStyle(color: Color(0xFF637083), fontSize: 12),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => _openInterviews(context),
+                  child: const Text('查看全部'),
+                ),
+              ],
+            ),
+            if (vm.interviews.isEmpty)
+              const Text('暂无面试安排')
+            else
+              ...previews.map((interview) {
+                final type =
+                    _interviewTypeLabel(_toInt(interview['interviewType']));
+                final status =
+                    _interviewStatusLabel(_toInt(interview['status']));
+                final schedule = _formatDateTime(interview['scheduledAt']);
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('$type · $status'),
+                  subtitle: Text(schedule),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => _openInterviews(context),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openInterviews(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentInterviewsPage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    await _runAction(vm.loadInterviews);
+  }
+
   Future<void> _setDefaultResume(int resumeId) async {
     await _runAction(() => vm.setDefaultResume(resumeId));
   }
@@ -190,39 +254,49 @@ class StudentProfileModulePage extends StatelessWidget {
   }
 
   Future<void> _createResume(BuildContext context) async {
-    final titleCtl = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('新建简历'),
-        content: TextField(
-          controller: titleCtl,
-          decoration: const InputDecoration(hintText: '简历标题'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final title = titleCtl.text.trim();
-              if (title.isEmpty) {
-                onMessage('请输入标题');
-                return;
-              }
-              Navigator.pop(context);
-              await _runAction(() => vm.createResume(
-                    title: title,
-                    contentJson: '{"education":[],"skills":[]}',
-                  ));
-              onMessage('创建成功');
-            },
-            child: const Text('创建'),
-          ),
-        ],
+    final result = await Navigator.push<ResumeEditorResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const StudentResumeEditorPage()),
+    );
+    if (result == null) {
+      return;
+    }
+    await _runAction(
+      () => vm.createResume(
+        title: result.title,
+        contentJson: result.contentJson,
+        completionScore: result.completionScore,
       ),
     );
+    onMessage('简历创建成功');
+  }
+
+  Future<void> _editResume(
+    BuildContext context,
+    Map<String, dynamic> resume,
+    int resumeId,
+  ) async {
+    final result = await Navigator.push<ResumeEditorResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentResumeEditorPage(
+          initialTitle: _rawText(resume['title']),
+          initialContentJson: _rawText(resume['resumeContentJson']),
+        ),
+      ),
+    );
+    if (result == null) {
+      return;
+    }
+    await _runAction(
+      () => vm.updateResume(
+        resumeId: resumeId,
+        title: result.title,
+        contentJson: result.contentJson,
+        completionScore: result.completionScore,
+      ),
+    );
+    onMessage('简历更新成功');
   }
 
   Future<void> _createReview(BuildContext context) async {
@@ -364,6 +438,8 @@ class StudentProfileModulePage extends StatelessWidget {
 
   String _toText(dynamic value) => value?.toString() ?? '-';
 
+  String _rawText(dynamic value) => value?.toString() ?? '';
+
   int? _toInt(dynamic value) {
     if (value is int) {
       return value;
@@ -373,4 +449,44 @@ class StudentProfileModulePage extends StatelessWidget {
     }
     return int.tryParse(value?.toString() ?? '');
   }
+
+  String _interviewTypeLabel(int? type) {
+    switch (type) {
+      case 1:
+        return '线上面试';
+      case 2:
+        return '线下面试';
+      default:
+        return '未知类型';
+    }
+  }
+
+  String _interviewStatusLabel(int? status) {
+    switch (status) {
+      case 1:
+        return '待面试';
+      case 2:
+        return '已完成';
+      case 3:
+        return '已取消';
+      default:
+        return '状态未知';
+    }
+  }
+
+  String _formatDateTime(dynamic value) {
+    final raw = _toText(value);
+    if (raw.isEmpty || raw == '-') {
+      return '-';
+    }
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) {
+      return raw;
+    }
+    final local = dt.toLocal();
+    return '${local.year}-${_two(local.month)}-${_two(local.day)} '
+        '${_two(local.hour)}:${_two(local.minute)}';
+  }
+
+  String _two(int value) => value.toString().padLeft(2, '0');
 }

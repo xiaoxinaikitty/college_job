@@ -8,11 +8,11 @@
 -- =========================================================
 -- 0) Database
 -- =========================================================
-CREATE DATABASE IF NOT EXISTS college_job_system
+CREATE DATABASE IF NOT EXISTS college_job
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_0900_ai_ci;
 
-USE college_job_system;
+USE college_job;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -303,6 +303,23 @@ CREATE TABLE IF NOT EXISTS cjs_interview_feedback (
   CONSTRAINT fk_cjs_interview_feedback_interview FOREIGN KEY (interview_id) REFERENCES cjs_interview_schedule(id) ON DELETE CASCADE,
   CONSTRAINT fk_cjs_interview_feedback_user FOREIGN KEY (evaluator_user_id) REFERENCES cjs_user(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='面试反馈';
+
+CREATE TABLE IF NOT EXISTS cjs_interview_student_confirm (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  interview_id BIGINT UNSIGNED NOT NULL,
+  student_user_id BIGINT UNSIGNED NOT NULL,
+  action_type TINYINT UNSIGNED NOT NULL COMMENT '1-confirm 2-reschedule 3-decline',
+  note VARCHAR(255) NULL,
+  expected_reschedule_at DATETIME(3) NULL,
+  submitted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_cjs_interview_student_confirm (interview_id, student_user_id),
+  KEY idx_cjs_interview_student_confirm_student (student_user_id, submitted_at),
+  CONSTRAINT fk_cjs_interview_student_confirm_interview FOREIGN KEY (interview_id) REFERENCES cjs_interview_schedule(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cjs_interview_student_confirm_student FOREIGN KEY (student_user_id) REFERENCES cjs_user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学生面试确认';
 
 CREATE TABLE IF NOT EXISTS cjs_offer (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

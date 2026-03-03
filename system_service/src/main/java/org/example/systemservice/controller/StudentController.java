@@ -151,6 +151,26 @@ public class StudentController {
         return ApiResponse.success(studentService.listInterviews(studentUserId));
     }
 
+    @PostMapping("/interviews/{interviewId}/confirm")
+    public ApiResponse<Map<String, Object>> submitInterviewConfirm(
+            @RequestHeader("X-User-Id") Long studentUserId,
+            @PathVariable Long interviewId,
+            @Valid @RequestBody InterviewConfirmRequest request
+    ) {
+        return ApiResponse.success(
+                "面试确认提交成功",
+                studentService.submitInterviewConfirm(studentUserId, interviewId, request)
+        );
+    }
+
+    @GetMapping("/interviews/{interviewId}/confirm")
+    public ApiResponse<Map<String, Object>> interviewConfirmDetail(
+            @RequestHeader("X-User-Id") Long studentUserId,
+            @PathVariable Long interviewId
+    ) {
+        return ApiResponse.success(studentService.interviewConfirmDetail(studentUserId, interviewId));
+    }
+
     @GetMapping("/offers")
     public ApiResponse<List<Offer>> listOffers(
             @RequestHeader("X-User-Id") Long studentUserId
