@@ -13,4 +13,10 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     Optional<JobApplication> findByIdAndStudentUserId(Long id, Long studentUserId);
 
     List<JobApplication> findByStudentUserIdOrderByCreatedAtDesc(Long studentUserId);
+
+    Optional<JobApplication> findByIdAndEnterpriseId(Long id, Long enterpriseId);
+
+    List<JobApplication> findByEnterpriseIdOrderByCreatedAtDesc(Long enterpriseId);
+
+    long countByJobId(Long jobId);
 }

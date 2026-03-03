@@ -29,4 +29,28 @@ public interface InterviewScheduleRepository extends JpaRepository<InterviewSche
             @Param("interviewId") Long interviewId,
             @Param("studentUserId") Long studentUserId
     );
+
+    @Query("""
+            select i from InterviewSchedule i
+            where i.applicationId in (
+              select a.id from JobApplication a where a.enterpriseId = :enterpriseId
+            )
+            order by i.scheduledAt desc
+            """)
+    List<InterviewSchedule> findByEnterpriseId(@Param("enterpriseId") Long enterpriseId);
+
+    @Query("""
+            select i from InterviewSchedule i
+            where i.id = :interviewId and i.applicationId in (
+              select a.id from JobApplication a where a.enterpriseId = :enterpriseId
+            )
+            """)
+    Optional<InterviewSchedule> findByIdAndEnterpriseId(
+            @Param("interviewId") Long interviewId,
+            @Param("enterpriseId") Long enterpriseId
+    );
+
+    List<InterviewSchedule> findByApplicationIdOrderByScheduledAtDesc(Long applicationId);
+
+    long countByApplicationId(Long applicationId);
 }

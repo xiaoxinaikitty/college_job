@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface InterviewStudentConfirmRepository extends JpaRepository<InterviewStudentConfirm, Long> {
 
     Optional<InterviewStudentConfirm> findByInterviewIdAndStudentUserId(Long interviewId, Long studentUserId);
+
+    Optional<InterviewStudentConfirm> findByInterviewId(Long interviewId);
 }

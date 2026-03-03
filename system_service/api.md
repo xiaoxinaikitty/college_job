@@ -1,4 +1,4 @@
-# 后端接口文档（认证 + 学生端MVP）
+# 后端接口文档（认证 + 学生端 + 企业端）
 
 ## 1. 基础说明
 - 服务地址：`http://localhost:8080`
@@ -314,7 +314,129 @@ X-User-Id: 1
 
 ---
 
-## 4. 状态值约定
+## 4. 企业端接口（/api/enterprise）
+
+> 企业端接口同样使用请求头：
+```http
+X-User-Id: 2
+```
+
+### 4.1 企业资料与认证
+- `GET /api/enterprise/profile` 获取企业资料
+- `PUT /api/enterprise/profile` 更新企业资料
+- `POST /api/enterprise/certifications/submit` 提交企业认证
+
+认证请求体示例：
+```json
+{
+  "licenseFileUrl": "https://example.com/license.png",
+  "submitRemark": "首次提交营业执照"
+}
+```
+
+### 4.2 岗位管理
+- `POST /api/enterprise/jobs` 新建岗位
+- `PUT /api/enterprise/jobs/{jobId}` 编辑岗位
+- `PUT /api/enterprise/jobs/{jobId}/offline` 下线岗位
+- `GET /api/enterprise/jobs` 查询我的岗位列表
+- `GET /api/enterprise/jobs/{jobId}` 查询岗位详情
+
+岗位创建/更新请求体示例：
+```json
+{
+  "title": "Java后端实习生",
+  "category": "后端开发",
+  "city": "上海",
+  "salaryMin": 3000,
+  "salaryMax": 6000,
+  "internshipMonths": 3,
+  "educationRequirement": "本科",
+  "description": "参与SpringBoot服务开发",
+  "requirementText": "熟悉Java、MySQL",
+  "submitForReview": true
+}
+```
+
+说明：
+- `submitForReview=true` 时岗位状态会进入 `待审核`，便于后续接入管理员审核闭环。
+- `submitForReview=false` 时岗位会直接进入 `已上线`，学生端可立即看到并投递（当前联调建议使用）。
+
+### 4.3 候选人管理
+- `GET /api/enterprise/applications?status=4&jobId=1001` 查询候选人投递
+- `GET /api/enterprise/applications/{applicationId}` 查询投递详情
+- `POST /api/enterprise/applications/{applicationId}/status` 更新投递状态
+
+投递状态更新请求体示例：
+```json
+{
+  "toStatus": 7,
+  "rejectReason": "岗位匹配度不足",
+  "note": "二轮面试后淘汰"
+}
+```
+
+说明：
+- 企业端支持状态：`2/3/4/5/6/7`
+- 当 `toStatus=7`（淘汰）时，`rejectReason` 必填。
+
+### 4.4 沟通模块
+- `GET /api/enterprise/chats` 我的会话列表
+- `GET /api/enterprise/chats/{conversationId}/messages` 会话消息列表
+- `POST /api/enterprise/chats/{conversationId}/messages` 发送消息
+
+### 4.5 面试模块
+- `POST /api/enterprise/interviews` 安排面试
+- `GET /api/enterprise/interviews?applicationId=3001` 查看面试列表
+- `POST /api/enterprise/interviews/{interviewId}/result` 填写面试结果
+
+安排面试请求体示例：
+```json
+{
+  "applicationId": 3001,
+  "interviewType": 1,
+  "scheduledAt": "2026-03-10T14:30:00",
+  "durationMinutes": 45,
+  "meetingLink": "https://meeting.example.com/abc123",
+  "location": "",
+  "remark": "请提前10分钟进入会议"
+}
+```
+
+填写结果请求体示例：
+```json
+{
+  "result": "pass",
+  "note": "技术能力符合岗位要求"
+}
+```
+
+说明：
+- `result` 仅支持 `pass/fail/hold`。
+- 面试列表会返回学生确认信息（若学生已提交确认）：
+  - `confirmAction`: `confirm/reschedule/decline`
+  - `confirmActionLabel`: `确认参加/申请改期/无法参加`
+  - `confirmExpectedRescheduleAt`: 学生期望改期时间
+
+### 4.6 Offer模块
+- `POST /api/enterprise/offers` 发放Offer
+- `GET /api/enterprise/offers` Offer列表（含学生处理结果）
+
+发放Offer请求体示例：
+```json
+{
+  "applicationId": 3001,
+  "salaryMin": 5000,
+  "salaryMax": 7000,
+  "internshipStartDate": "2026-04-01",
+  "internshipEndDate": "2026-07-01",
+  "termsText": "每周到岗4天，可转正",
+  "expiresAt": "2026-03-20T23:59:59"
+}
+```
+
+---
+
+## 5. 状态值约定
 
 ### 4.1 岗位状态
 - `1-draft 2-pending 3-online 4-rejected 5-offline`
@@ -330,7 +452,7 @@ X-User-Id: 1
 
 ---
 
-## 5. 错误码
+## 6. 错误码
 - `4001` 参数错误
 - `4002` 手机号已注册
 - `4003` 账号不存在
@@ -347,12 +469,14 @@ X-User-Id: 1
 
 ---
 
-## 6. 联调建议流程（学生闭环）
+## 7. 联调建议流程（学生 + 企业闭环）
 1. 调用认证接口注册并登录，拿到 `userId`。  
 2. 使用 `X-User-Id=userId` 创建并设置默认简历。  
 3. 查询岗位列表，查看岗位详情。  
 4. 发起投递，查询投递记录与状态日志。  
 5. 进入会话发送消息。  
-6. 查看面试安排、查看Offer并处理。  
-7. 流程结束后提交评价或举报。  
+6. 企业端处理候选人、安排面试、填写面试结果。  
+7. 企业端发放Offer，学生端处理Offer。  
+8. 学生查看面试安排、查看Offer并处理。  
+9. 流程结束后提交评价或举报。  
 
