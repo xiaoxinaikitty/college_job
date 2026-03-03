@@ -6,8 +6,15 @@ import org.example.systemservice.common.PageResponse;
 import org.example.systemservice.dto.student.*;
 import org.example.systemservice.entity.*;
 import org.example.systemservice.service.StudentService;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +57,28 @@ public class StudentController {
     ) {
         studentService.setDefaultResume(studentUserId, resumeId);
         return ApiResponse.success("设置默认简历成功", null);
+    }
+
+    @PostMapping(value = "/resumes/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<Map<String, Object>> uploadResumeFile(
+            @RequestHeader("X-User-Id") Long studentUserId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) String title
+    ) {
+        return ApiResponse.success("简历上传成功", studentService.uploadResumeFile(studentUserId, file, title));
+    }
+
+    @GetMapping("/resumes/{resumeId}/file")
+    public ResponseEntity<FileSystemResource> downloadResumeFile(
+            @RequestHeader("X-User-Id") Long studentUserId,
+            @PathVariable Long resumeId
+    ) {
+        StudentService.ResumeFileInfo fileInfo = studentService.resolveResumeFile(studentUserId, resumeId);
+        String encodedFileName = UriUtils.encode(fileInfo.getFileName(), StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(fileInfo.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
+                .body(new FileSystemResource(fileInfo.getFilePath().toFile()));
     }
 
     @GetMapping("/jobs")
@@ -168,3 +197,5 @@ public class StudentController {
         return ApiResponse.success(studentService.listMyReports(studentUserId));
     }
 }
+
+

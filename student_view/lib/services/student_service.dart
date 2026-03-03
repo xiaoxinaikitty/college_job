@@ -40,6 +40,54 @@ class StudentService {
     return _asMap(data);
   }
 
+  Future<Map<String, dynamic>> uploadResumeFile({
+    required String baseUrl,
+    required int userId,
+    required String filePath,
+    required String fileName,
+    String? title,
+  }) async {
+    final cleanBaseUrl = baseUrl.trim().replaceAll(RegExp(r'\/+$'), '');
+    final uri = Uri.parse('$cleanBaseUrl/api/student/resumes/upload');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['X-User-Id'] = '$userId'
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          filename: fileName,
+        ),
+      );
+
+    if (title != null && title.trim().isNotEmpty) {
+      request.fields['title'] = title.trim();
+    }
+
+    http.StreamedResponse streamedResponse;
+    http.Response response;
+    try {
+      streamedResponse = await request.send();
+      response = await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw ApiException('网络异常: $e');
+    }
+
+    Map<String, dynamic> wrapper;
+    try {
+      wrapper = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('服务端响应格式错误');
+    }
+
+    final code = (wrapper['code'] as num?)?.toInt() ?? -1;
+    final message = wrapper['message']?.toString() ?? '请求失败';
+    if (response.statusCode < 200 || response.statusCode >= 300 || code != 0) {
+      throw ApiException(message);
+    }
+
+    return _asMap(wrapper['data']);
+  }
+
   Future<Map<String, dynamic>> updateResume({
     required String baseUrl,
     required int userId,

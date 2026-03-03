@@ -1,5 +1,7 @@
 package org.example.systemservice.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.systemservice.common.ErrorCode;
 import org.example.systemservice.common.PageResponse;
 import org.example.systemservice.dto.student.*;
@@ -12,8 +14,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -36,6 +43,10 @@ public class StudentService {
     private final EnterpriseReviewRepository enterpriseReviewRepository;
     private final ReportRepository reportRepository;
     private final EnterpriseRepository enterpriseRepository;
+    private final ObjectMapper objectMapper;
+
+    private static final long MAX_RESUME_FILE_SIZE = 10L * 1024 * 1024;
+    private static final Set<String> ALLOWED_RESUME_EXTENSIONS = Set.of("pdf", "doc", "docx");
 
     public StudentService(
             UserRepository userRepository,
@@ -50,7 +61,8 @@ public class StudentService {
             OfferStatusLogRepository offerStatusLogRepository,
             EnterpriseReviewRepository enterpriseReviewRepository,
             ReportRepository reportRepository,
-            EnterpriseRepository enterpriseRepository
+            EnterpriseRepository enterpriseRepository,
+            ObjectMapper objectMapper
     ) {
         this.userRepository = userRepository;
         this.resumeRepository = resumeRepository;
@@ -65,6 +77,7 @@ public class StudentService {
         this.enterpriseReviewRepository = enterpriseReviewRepository;
         this.reportRepository = reportRepository;
         this.enterpriseRepository = enterpriseRepository;
+        this.objectMapper = objectMapper;
     }
 
     private void validateStudent(Long studentUserId) {
@@ -115,6 +128,118 @@ public class StudentService {
     public List<Resume> listResumes(Long studentUserId) {
         validateStudent(studentUserId);
         return resumeRepository.findByStudentUserIdOrderByUpdatedAtDesc(studentUserId);
+    }
+
+    @Transactional
+    public Map<String, Object> uploadResumeFile(Long studentUserId, MultipartFile file, String title) {
+        validateStudent(studentUserId);
+        if (file == null || file.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "请上传简历文件");
+        }
+
+        String originalFilename = Optional.ofNullable(file.getOriginalFilename()).orElse("resume");
+        String extension = getFileExtension(originalFilename);
+        if (!ALLOWED_RESUME_EXTENSIONS.contains(extension)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "仅支持 pdf/doc/docx 文件");
+        }
+        if (file.getSize() > MAX_RESUME_FILE_SIZE) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "文件大小不能超过10MB");
+        }
+
+        Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "resumes", String.valueOf(studentUserId));
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new BizException(ErrorCode.SYSTEM_ERROR, "创建上传目录失败");
+        }
+
+        String storageFileName = buildStorageFileName(extension);
+        Path targetPath = uploadDir.resolve(storageFileName);
+        try {
+            file.transferTo(targetPath.toFile());
+        } catch (IOException e) {
+            throw new BizException(ErrorCode.SYSTEM_ERROR, "保存文件失败");
+        }
+
+        String resumeTitle = (title != null && !title.trim().isEmpty())
+                ? title.trim()
+                : extractBaseName(originalFilename);
+
+        boolean hasResume = !resumeRepository.findByStudentUserIdOrderByUpdatedAtDesc(studentUserId).isEmpty();
+
+        Map<String, Object> contentJsonMap = new LinkedHashMap<>();
+        contentJsonMap.put("source", "file_upload");
+        contentJsonMap.put("originalFileName", originalFilename);
+        contentJsonMap.put("storedFileName", storageFileName);
+        contentJsonMap.put("fileSize", file.getSize());
+        contentJsonMap.put("fileExtension", extension);
+        contentJsonMap.put("storagePath", targetPath.toString());
+
+        Resume resume = new Resume();
+        resume.setStudentUserId(studentUserId);
+        resume.setTitle(resumeTitle);
+        resume.setIsDefault(hasResume ? 0 : 1);
+        resume.setResumeStatus(1);
+        resume.setCompletionScore(BigDecimal.valueOf(20));
+
+        try {
+            resume.setResumeContentJson(objectMapper.writeValueAsString(contentJsonMap));
+        } catch (Exception e) {
+            throw new BizException(ErrorCode.SYSTEM_ERROR, "构建简历内容失败");
+        }
+
+        resume = resumeRepository.save(resume);
+
+        String downloadUrl = "/api/student/resumes/" + resume.getId() + "/file";
+        contentJsonMap.put("downloadUrl", downloadUrl);
+        try {
+            resume.setResumeContentJson(objectMapper.writeValueAsString(contentJsonMap));
+        } catch (Exception e) {
+            throw new BizException(ErrorCode.SYSTEM_ERROR, "更新简历内容失败");
+        }
+        resume = resumeRepository.save(resume);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("resume", resume);
+        result.put("resumeId", resume.getId());
+        result.put("downloadUrl", downloadUrl);
+        result.put("fileName", originalFilename);
+        result.put("fileSize", file.getSize());
+        return result;
+    }
+
+    public ResumeFileInfo resolveResumeFile(Long studentUserId, Long resumeId) {
+        validateStudent(studentUserId);
+        Resume resume = resumeRepository.findByIdAndStudentUserId(resumeId, studentUserId)
+                .orElseThrow(() -> new BizException(ErrorCode.DATA_NOT_FOUND, "简历不存在"));
+
+        Map<String, Object> content = parseResumeContent(resume.getResumeContentJson());
+        String storagePath = valueToString(content.get("storagePath"));
+        if (storagePath == null || storagePath.isBlank()) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "简历文件不存在");
+        }
+
+        Path filePath = Paths.get(storagePath);
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "简历文件不存在");
+        }
+
+        String fileName = valueToString(content.get("originalFileName"));
+        if (fileName == null || fileName.isBlank()) {
+            fileName = resume.getTitle() + "." + Optional.ofNullable(valueToString(content.get("fileExtension"))).orElse("pdf");
+        }
+
+        String contentType;
+        try {
+            contentType = Files.probeContentType(filePath);
+        } catch (IOException ignored) {
+            contentType = null;
+        }
+        if (contentType == null || contentType.isBlank()) {
+            contentType = guessContentTypeByExtension(fileName);
+        }
+
+        return new ResumeFileInfo(filePath, fileName, contentType);
     }
 
     public PageResponse<Map<String, Object>> listJobs(String keyword, String city, String category, int page, int size) {
@@ -370,6 +495,82 @@ public class StudentService {
         return reportRepository.findByReporterUserIdOrderByCreatedAtDesc(studentUserId);
     }
 
+    private Map<String, Object> parseResumeContent(String resumeContentJson) {
+        if (resumeContentJson == null || resumeContentJson.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            return objectMapper.readValue(resumeContentJson, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return new LinkedHashMap<>();
+        }
+    }
+
+    private String buildStorageFileName(String extension) {
+        return System.currentTimeMillis() + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 10) + "." + extension;
+    }
+
+    private String getFileExtension(String fileName) {
+        int idx = fileName.lastIndexOf('.');
+        if (idx < 0 || idx == fileName.length() - 1) {
+            return "";
+        }
+        return fileName.substring(idx + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private String extractBaseName(String fileName) {
+        int idx = fileName.lastIndexOf('.');
+        String name = idx > 0 ? fileName.substring(0, idx) : fileName;
+        String normalized = name.trim();
+        if (normalized.isEmpty()) {
+            return "我的上传简历";
+        }
+        return normalized.length() > 120 ? normalized.substring(0, 120) : normalized;
+    }
+
+    private String valueToString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String guessContentTypeByExtension(String fileName) {
+        String ext = getFileExtension(fileName);
+        switch (ext) {
+            case "pdf":
+                return "application/pdf";
+            case "doc":
+                return "application/msword";
+            case "docx":
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            default:
+                return "application/octet-stream";
+        }
+    }
+
+    public static class ResumeFileInfo {
+        private final Path filePath;
+        private final String fileName;
+        private final String contentType;
+
+        public ResumeFileInfo(Path filePath, String fileName, String contentType) {
+            this.filePath = filePath;
+            this.fileName = fileName;
+            this.contentType = contentType;
+        }
+
+        public Path getFilePath() {
+            return filePath;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+    }
+
     private String generateApplicationNo() {
         String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         int random = ThreadLocalRandom.current().nextInt(1000, 9999);
@@ -402,3 +603,11 @@ public class StudentService {
         applicationStatusLogRepository.save(log);
     }
 }
+
+
+
+
+
+
+
+

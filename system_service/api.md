@@ -94,6 +94,36 @@ X-User-Id: 1
 #### 3.1.4 设置默认简历
 - `PUT /api/student/resumes/{resumeId}/default`
 
+#### 3.1.5 一键上传简历文件
+- `POST /api/student/resumes/upload`
+- `Content-Type: multipart/form-data`
+
+请求头：
+```http
+X-User-Id: 1
+```
+
+表单参数：
+- `file`：简历文件（必填，支持 `pdf/doc/docx`，最大 `10MB`）
+- `title`：简历标题（选填）
+
+返回：
+- `resumeId`
+- `downloadUrl`
+- `fileName`
+- `fileSize`
+
+#### 3.1.6 下载已上传简历文件
+- `GET /api/student/resumes/{resumeId}/file`
+
+请求头：
+```http
+X-User-Id: 1
+```
+
+说明：
+- 仅允许下载当前学生本人上传的简历文件。
+
 ---
 
 ### 3.2 岗位模块
@@ -283,3 +313,4 @@ X-User-Id: 1
 5. 进入会话发送消息。  
 6. 查看面试安排、查看Offer并处理。  
 7. 流程结束后提交评价或举报。  
+

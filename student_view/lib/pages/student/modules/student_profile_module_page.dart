@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../viewmodels/student_home_view_model.dart';
@@ -46,6 +47,10 @@ class StudentProfileModulePage extends StatelessWidget {
                 const Text('我的简历',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 const Spacer(),
+                TextButton(
+                  onPressed: () => _uploadResumeFile(context),
+                  child: const Text('上传'),
+                ),
                 TextButton(
                   onPressed: () => _createResume(context),
                   child: const Text('新建'),
@@ -154,6 +159,34 @@ class StudentProfileModulePage extends StatelessWidget {
 
   Future<void> _setDefaultResume(int resumeId) async {
     await _runAction(() => vm.setDefaultResume(resumeId));
+  }
+
+  Future<void> _uploadResumeFile(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'doc', 'docx'],
+      allowMultiple: false,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final picked = result.files.first;
+    final filePath = picked.path;
+    if (filePath == null || filePath.isEmpty) {
+      onMessage('当前平台未返回文件路径，暂不支持上传');
+      return;
+    }
+
+    await _runAction(
+      () => vm.uploadResumeFile(
+        filePath: filePath,
+        fileName: picked.name,
+        title: _extractBaseName(picked.name),
+      ),
+    );
+    onMessage('简历上传成功');
   }
 
   Future<void> _createResume(BuildContext context) async {
@@ -311,6 +344,14 @@ class StudentProfileModulePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _extractBaseName(String fileName) {
+    final index = fileName.lastIndexOf('.');
+    if (index <= 0) {
+      return fileName;
+    }
+    return fileName.substring(0, index);
   }
 
   Future<void> _runAction(Future<void> Function() action) async {

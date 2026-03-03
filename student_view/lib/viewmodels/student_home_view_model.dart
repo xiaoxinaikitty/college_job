@@ -154,6 +154,23 @@ class StudentHomeViewModel extends ChangeNotifier {
     });
   }
 
+  Future<void> uploadResumeFile({
+    required String filePath,
+    required String fileName,
+    String? title,
+  }) async {
+    await _runBusy(() async {
+      await _service.uploadResumeFile(
+        baseUrl: baseUrl,
+        userId: userId,
+        filePath: filePath,
+        fileName: fileName,
+        title: title,
+      );
+      await loadResumes();
+    });
+  }
+
   Future<void> setDefaultResume(int resumeId) async {
     await _runBusy(() async {
       await _service.setDefaultResume(
