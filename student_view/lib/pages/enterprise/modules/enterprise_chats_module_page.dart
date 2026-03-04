@@ -25,7 +25,7 @@ class EnterpriseChatsModulePage extends StatelessWidget {
               ],
             )
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               itemCount: vm.conversations.length,
               itemBuilder: (_, index) {
                 final chat = vm.conversations[index];
@@ -35,7 +35,29 @@ class EnterpriseChatsModulePage extends StatelessWidget {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    title: Text(title == '-' ? '学生' : title),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFEAF7EF),
+                      child: Text(
+                        (title == '-' ? '学' : title.substring(0, 1)),
+                        style: const TextStyle(
+                          color: Color(0xFF157347),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      title == '-' ? '学生' : title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      _toText(chat['lastMessageContent']) == '-'
+                          ? '点击进入会话'
+                          : _toText(chat['lastMessageContent']),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -52,7 +74,8 @@ class EnterpriseChatsModulePage extends StatelessWidget {
                               return;
                             }
                             await _safeAction(
-                                () => vm.markConversationRead(cid));
+                              () => vm.markConversationRead(cid),
+                            );
                             if (!context.mounted) {
                               return;
                             }
@@ -82,7 +105,13 @@ class EnterpriseChatsModulePage extends StatelessWidget {
     );
   }
 
-  String _toText(dynamic value) => value?.toString() ?? '-';
+  String _toText(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') {
+      return '-';
+    }
+    return text;
+  }
 
   int? _toInt(dynamic value) {
     if (value is int) {

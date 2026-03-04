@@ -27,7 +27,7 @@ class StudentChatsModulePage extends StatelessWidget {
               ],
             )
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               itemCount: vm.conversations.length,
               itemBuilder: (_, index) {
                 final chat = vm.conversations[index];
@@ -35,8 +35,31 @@ class StudentChatsModulePage extends StatelessWidget {
                 final title = _toText(chat['counterpartName']);
                 final unread = id == null ? 0 : vm.unreadOfConversation(id);
                 return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    title: Text(title == '-' ? '企业' : title),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFEAF1FF),
+                      child: Text(
+                        (title == '-' ? '企' : title.substring(0, 1)),
+                        style: const TextStyle(
+                          color: Color(0xFF1E40AF),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      title == '-' ? '企业' : title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      _toText(chat['lastMessageContent']) == '-'
+                          ? '点击进入会话'
+                          : _toText(chat['lastMessageContent']),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -88,7 +111,13 @@ class StudentChatsModulePage extends StatelessWidget {
     );
   }
 
-  String _toText(dynamic value) => value?.toString() ?? '-';
+  String _toText(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') {
+      return '-';
+    }
+    return text;
+  }
 
   int? _toInt(dynamic value) {
     if (value is int) {
@@ -132,8 +161,7 @@ class StudentChatsModulePage extends StatelessWidget {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(e.toString()), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text(e.toString())),
       );
     }
   }

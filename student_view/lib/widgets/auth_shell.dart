@@ -11,44 +11,114 @@ class AuthShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0B5FFF),
-              Color(0xFF13B6FF),
-              Color(0xFFEFF4FF),
-            ],
-            stops: [0.0, 0.38, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.92),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x26000000),
-                        blurRadius: 30,
-                        offset: Offset(0, 16),
-                      ),
-                    ],
+      body: Stack(
+        children: [
+          const _AuthBackground(),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: const Color(0xFFD8E4FA)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1F0F172A),
+                          blurRadius: 40,
+                          offset: Offset(0, 14),
+                        ),
+                      ],
+                    ),
+                    child: child,
                   ),
-                  child: child,
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthBackground extends StatelessWidget {
+  const _AuthBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E3A8A),
+            Color(0xFF2563EB),
+            Color(0xFF60A5FA),
+            Color(0xFFEFF6FF),
+          ],
+          stops: [0.0, 0.26, 0.56, 1.0],
         ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -120,
+            right: -80,
+            child: _blurCircle(
+              size: 300,
+              color: const Color(0x66FFFFFF),
+            ),
+          ),
+          Positioned(
+            bottom: -140,
+            left: -90,
+            child: _blurCircle(
+              size: 280,
+              color: const Color(0x4DFFFFFF),
+            ),
+          ),
+          Positioned(
+            top: 72,
+            left: 22,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withOpacity(0.42)),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                child: Text(
+                  'Campus Job System',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _blurCircle({required double size, required Color color}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
       ),
     );
   }
@@ -69,13 +139,26 @@ class AuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF1FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.school_rounded,
+            color: Color(0xFF2667FF),
+          ),
+        ),
+        const SizedBox(height: 10),
         Text(
           title,
           style: const TextStyle(
-            fontSize: 28,
+            fontSize: 27,
             fontWeight: FontWeight.w800,
             color: Color(0xFF0F172A),
-            letterSpacing: -0.3,
+            letterSpacing: -0.15,
           ),
         ),
         const SizedBox(height: 6),
@@ -83,7 +166,7 @@ class AuthHeader extends StatelessWidget {
           subtitle,
           style: const TextStyle(
             fontSize: 14,
-            color: Color(0xFF5F6C80),
+            color: Color(0xFF5B6B85),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -115,7 +198,8 @@ class SegmentSwitch extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: const Color(0xFFDCE6F7)),
       ),
       child: Row(
         children: [
@@ -146,14 +230,14 @@ class SegmentSwitch extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           margin: const EdgeInsets.all(4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 11),
           decoration: BoxDecoration(
             color: selected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: selected
                 ? const [
                     BoxShadow(
-                      color: Color(0x1A0B5FFF),
+                      color: Color(0x182667FF),
                       blurRadius: 14,
                       offset: Offset(0, 6),
                     ),
@@ -166,7 +250,7 @@ class SegmentSwitch extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color:
-                  selected ? const Color(0xFF0B5FFF) : const Color(0xFF6E7A8F),
+                  selected ? const Color(0xFF2667FF) : const Color(0xFF6E7A8F),
             ),
           ),
         ),

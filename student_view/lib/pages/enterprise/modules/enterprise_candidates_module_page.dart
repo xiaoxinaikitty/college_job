@@ -154,6 +154,8 @@ class _EnterpriseCandidatesModulePageState
                                   Expanded(
                                     child: Text(
                                       _text(app['studentNickname']),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 16,
@@ -241,6 +243,8 @@ class _EnterpriseCandidatesModulePageState
                   child: ListTile(
                     title: Text(
                       '${_text(item['studentNickname'])} · ${_text(item['interviewTypeLabel'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
                       '时间: ${_formatDateTime(item['scheduledAt'])}\n'
@@ -280,6 +284,8 @@ class _EnterpriseCandidatesModulePageState
                   child: ListTile(
                     title: Text(
                       '${_text(offer['studentNickname'])} · ${_text(offer['jobTitle'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
                       '状态: ${_text(offer['statusLabel'])}\n'

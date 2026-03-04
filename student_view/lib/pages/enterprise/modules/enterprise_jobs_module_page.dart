@@ -24,26 +24,34 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '我的岗位 ${widget.vm.jobs.length} 个',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1FAF5),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFDCEFE5)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '我的岗位 ${widget.vm.jobs.length} 个',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              FilledButton.icon(
-                onPressed: () => _openJobEditor(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF128C53),
+                FilledButton.icon(
+                  onPressed: () => _openJobEditor(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF128C53),
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('发布岗位'),
                 ),
-                icon: const Icon(Icons.add),
-                label: const Text('发布岗位'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -72,6 +80,8 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
                               Expanded(
                                 child: Text(
                                   _toText(job['title']),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700),
                                 ),

@@ -65,10 +65,12 @@ class _LoginPageState extends State<LoginPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AuthHeader(
-              title: '实习通',
-              subtitle: '大学生实习求职一站式服务平台',
+              title: '欢迎登录',
+              subtitle: '进入校园实习求职一站式服务平台',
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+            _introPanel(),
+            const SizedBox(height: 16),
             SegmentSwitch(
               leftTitle: '登录',
               rightTitle: '注册',
@@ -76,22 +78,23 @@ class _LoginPageState extends State<LoginPage> {
               onTapLeft: () {},
               onTapRight: _gotoRegister,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             SegmentSwitch(
               leftTitle: AccountRole.student.label,
               rightTitle: AccountRole.enterprise.label,
               leftSelected: _viewModel.role == AccountRole.student,
               onTapLeft: () => _viewModel.setRole(AccountRole.student),
               onTapRight: () => _viewModel.setRole(AccountRole.enterprise),
-              backgroundColor: const Color(0xFFF3F5FA),
+              backgroundColor: const Color(0xFFF2F6FD),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: '手机号',
                 hintText: '请输入手机号',
+                prefixIcon: Icon(Icons.phone_iphone_rounded),
               ),
               validator: (value) {
                 final text = (value ?? '').trim();
@@ -112,6 +115,7 @@ class _LoginPageState extends State<LoginPage> {
               decoration: InputDecoration(
                 labelText: '密码',
                 hintText: '请输入 6-32 位密码',
+                prefixIcon: const Icon(Icons.lock_outline_rounded),
                 suffixIcon: IconButton(
                   onPressed: _viewModel.toggleObscurePassword,
                   icon: Icon(
@@ -133,22 +137,13 @@ class _LoginPageState extends State<LoginPage> {
               },
               onChanged: (value) => _viewModel.password = value,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             _buildApiSettings(),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _viewModel.isLoading ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0B5FFF),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
                 child: _viewModel.isLoading
                     ? const SizedBox(
                         width: 20,
@@ -158,11 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        '登录',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700),
-                      ),
+                    : const Text('登录'),
               ),
             ),
             const SizedBox(height: 10),
@@ -184,77 +175,117 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _introPanel() {
+    final roleText = _viewModel.role == AccountRole.student ? '学生端' : '企业端';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF2F6FF),
+        border: Border.all(color: const Color(0xFFDCE6F8)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lightbulb_outline_rounded,
+              size: 18, color: Color(0xFF2667FF)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '当前登录模式：$roleText',
+              style: const TextStyle(
+                color: Color(0xFF31405C),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildApiSettings() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: _viewModel.toggleApiSettings,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                const Icon(Icons.settings_rounded,
-                    size: 18, color: Color(0xFF5778BD)),
-                const SizedBox(width: 6),
-                const Text(
-                  '后端接口设置',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF4E5F82),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDCE6F8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: _viewModel.toggleApiSettings,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.settings_rounded,
+                      size: 18, color: Color(0xFF5778BD)),
+                  const SizedBox(width: 6),
+                  const Text(
+                    '后端接口设置',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF4E5F82),
+                    ),
                   ),
+                  const Spacer(),
+                  Icon(
+                    _viewModel.showApiSettings
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    color: const Color(0xFF4E5F82),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState: _viewModel.showApiSettings
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Column(
+              children: [
+                TextFormField(
+                  controller: _apiController,
+                  decoration: const InputDecoration(
+                    labelText: '接口地址',
+                    hintText: 'http://localhost:8080',
+                    prefixIcon: Icon(Icons.link_rounded),
+                  ),
+                  validator: (value) {
+                    final text = (value ?? '').trim();
+                    if (text.isEmpty) {
+                      return '接口地址不能为空';
+                    }
+                    final uri = Uri.tryParse(text);
+                    if (uri == null ||
+                        !(uri.hasScheme && uri.host.isNotEmpty)) {
+                      return '接口地址格式不正确';
+                    }
+                    return null;
+                  },
+                  onChanged: (value) => _viewModel.baseUrl = value.trim(),
                 ),
-                const Spacer(),
-                Icon(
-                  _viewModel.showApiSettings
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
-                  color: const Color(0xFF4E5F82),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Android 模拟器一般使用: http://10.0.2.2:8080',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF72809A)),
+                  ),
                 ),
               ],
             ),
+            secondChild: const SizedBox.shrink(),
           ),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          crossFadeState: _viewModel.showApiSettings
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: Column(
-            children: [
-              TextFormField(
-                controller: _apiController,
-                decoration: const InputDecoration(
-                  labelText: '接口地址',
-                  hintText: 'http://localhost:8080',
-                ),
-                validator: (value) {
-                  final text = (value ?? '').trim();
-                  if (text.isEmpty) {
-                    return '接口地址不能为空';
-                  }
-                  final uri = Uri.tryParse(text);
-                  if (uri == null || !(uri.hasScheme && uri.host.isNotEmpty)) {
-                    return '接口地址格式不正确';
-                  }
-                  return null;
-                },
-                onChanged: (value) => _viewModel.baseUrl = value.trim(),
-              ),
-              const SizedBox(height: 6),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Android 模拟器一般使用: http://10.0.2.2:8080',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF72809A)),
-                ),
-              ),
-            ],
-          ),
-          secondChild: const SizedBox.shrink(),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -284,8 +315,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(e.toString()), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text(e.toString())),
       );
     }
   }

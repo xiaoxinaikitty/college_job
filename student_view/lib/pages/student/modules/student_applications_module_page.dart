@@ -14,38 +14,122 @@ class StudentApplicationsModulePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final total = vm.applications.length;
+    final interviewing =
+        vm.applications.where((item) => _toInt(item['status']) == 4).length;
+    final offer =
+        vm.applications.where((item) => _toInt(item['status']) == 5).length;
     return RefreshIndicator(
       onRefresh: vm.loadApplications,
-      child: vm.applications.isEmpty
-          ? ListView(
-              children: const [
-                SizedBox(height: 120),
-                Center(child: Text('暂无投递记录')),
-              ],
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: vm.applications.length,
-              itemBuilder: (_, index) {
-                final app = vm.applications[index];
-                final applicationId = _toInt(app['applicationId']);
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    title: Text('投递号: ${_toText(app['applicationNo'])}'),
-                    subtitle: Text(
-                      '状态: ${_toText(app['status'])}  岗位:${_toText(app['jobId'])}',
-                    ),
-                    trailing: TextButton(
-                      onPressed: applicationId == null
-                          ? null
-                          : () => _showStatusLogs(context, applicationId),
-                      child: const Text('流转'),
-                    ),
-                  ),
-                );
-              },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(child: _metric('总投递', '$total')),
+                  Expanded(child: _metric('面试中', '$interviewing')),
+                  Expanded(child: _metric('Offer阶段', '$offer')),
+                ],
+              ),
             ),
+          ),
+          const SizedBox(height: 10),
+          if (vm.applications.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 100),
+              child: Center(child: Text('暂无投递记录')),
+            )
+          else
+            ...vm.applications.map((app) {
+              final applicationId = _toInt(app['applicationId']);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _toText(app['jobTitle']) == '-'
+                                  ? '投递单号 ${_toText(app['applicationNo'])}'
+                                  : _toText(app['jobTitle']),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          _statusTag(_toText(app['statusLabel'])),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('投递编号：${_toText(app['applicationNo'])}'),
+                      Text('企业：${_toText(app['enterpriseName'])}'),
+                      Text('更新时间：${_toText(app['lastActionAt'])}'),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: applicationId == null
+                            ? null
+                            : () => _showStatusLogs(context, applicationId),
+                        child: const Text('查看流程日志'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _metric(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E40AF),
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statusTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF1FF),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E40AF),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
@@ -97,7 +181,13 @@ class StudentApplicationsModulePage extends StatelessWidget {
     }
   }
 
-  String _toText(dynamic value) => value?.toString() ?? '-';
+  String _toText(dynamic value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty || text == 'null') {
+      return '-';
+    }
+    return text;
+  }
 
   int? _toInt(dynamic value) {
     if (value is int) {

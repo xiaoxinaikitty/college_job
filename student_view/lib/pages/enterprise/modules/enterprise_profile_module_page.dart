@@ -252,16 +252,19 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         TextEditingController(text: _rawText(profile['website']));
     final logoCtl = TextEditingController(text: _rawText(profile['logoUrl']));
     final introCtl = TextEditingController(text: _rawText(profile['intro']));
+    final editControllers = <TextEditingController>[
+      enterpriseNameCtl,
+      creditCtl,
+      industryCtl,
+      cityCtl,
+      addressCtl,
+      websiteCtl,
+      logoCtl,
+      introCtl,
+    ];
 
     if (!context.mounted) {
-      enterpriseNameCtl.dispose();
-      creditCtl.dispose();
-      industryCtl.dispose();
-      cityCtl.dispose();
-      addressCtl.dispose();
-      websiteCtl.dispose();
-      logoCtl.dispose();
-      introCtl.dispose();
+      _disposeControllersSafely(editControllers);
       return;
     }
     final saved = await showDialog<bool>(
@@ -351,14 +354,7 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ],
       ),
     );
-    enterpriseNameCtl.dispose();
-    creditCtl.dispose();
-    industryCtl.dispose();
-    cityCtl.dispose();
-    addressCtl.dispose();
-    websiteCtl.dispose();
-    logoCtl.dispose();
-    introCtl.dispose();
+    _disposeControllersSafely(editControllers);
 
     if (saved == true) {
       onMessage('企业资料更新成功');
@@ -368,9 +364,9 @@ class EnterpriseProfileModulePage extends StatelessWidget {
   Future<void> _openCertificationSubmit(BuildContext context) async {
     final urlCtl = TextEditingController();
     final remarkCtl = TextEditingController();
+    final certControllers = <TextEditingController>[urlCtl, remarkCtl];
     if (!context.mounted) {
-      urlCtl.dispose();
-      remarkCtl.dispose();
+      _disposeControllersSafely(certControllers);
       return;
     }
     final saved = await showDialog<bool>(
@@ -432,11 +428,20 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ],
       ),
     );
-    urlCtl.dispose();
-    remarkCtl.dispose();
+    _disposeControllersSafely(certControllers);
     if (saved == true) {
       onMessage('企业认证已提交，等待管理员审核');
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   String _toText(dynamic value) {
