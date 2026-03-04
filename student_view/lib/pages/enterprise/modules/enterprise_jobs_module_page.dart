@@ -406,7 +406,7 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
                                 if (!ctx.mounted) {
                                   return;
                                 }
-                                FocusScope.of(ctx).unfocus();
+                                FocusManager.instance.primaryFocus?.unfocus();
                                 Navigator.pop(ctx, true);
                               } catch (e) {
                                 widget.onMessage(e.toString());

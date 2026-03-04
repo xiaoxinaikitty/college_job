@@ -178,6 +178,7 @@ class StudentOfferCenterPage extends StatelessWidget {
   Future<void> _rejectOffer(BuildContext context, int offerId) async {
     String? reason;
     final controller = TextEditingController();
+    final controllers = <TextEditingController>[controller];
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -190,7 +191,10 @@ class StudentOfferCenterPage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () {
+              FocusScope.of(dialogContext).unfocus();
+              Navigator.of(dialogContext).pop(false);
+            },
             child: const Text('取消'),
           ),
           FilledButton(
@@ -205,7 +209,7 @@ class StudentOfferCenterPage extends StatelessWidget {
         ],
       ),
     );
-    controller.dispose();
+    _disposeControllersSafely(controllers);
     if (result != true) {
       return;
     }
@@ -225,6 +229,16 @@ class StudentOfferCenterPage extends StatelessWidget {
     } catch (e) {
       onMessage(e.toString());
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   String _statusLabel(int? status) {

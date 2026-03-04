@@ -351,9 +351,9 @@ class _EnterpriseCandidatesModulePageState
     int toStatus = 2;
     final rejectCtl = TextEditingController();
     final noteCtl = TextEditingController();
+    final controllers = <TextEditingController>[rejectCtl, noteCtl];
     if (!mounted) {
-      rejectCtl.dispose();
-      noteCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     final saved = await showDialog<bool>(
@@ -396,7 +396,10 @@ class _EnterpriseCandidatesModulePageState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(ctx);
+              },
               child: const Text('取消'),
             ),
             FilledButton(
@@ -413,7 +416,7 @@ class _EnterpriseCandidatesModulePageState
                     note: _nullable(noteCtl.text),
                   );
                   if (ctx.mounted) {
-                    FocusScope.of(ctx).unfocus();
+                    FocusManager.instance.primaryFocus?.unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -429,8 +432,7 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
-    rejectCtl.dispose();
-    noteCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       widget.onMessage('候选人状态更新成功');
     }
@@ -443,11 +445,14 @@ class _EnterpriseCandidatesModulePageState
     final meetingCtl = TextEditingController();
     final locationCtl = TextEditingController();
     final remarkCtl = TextEditingController();
+    final controllers = <TextEditingController>[
+      durationCtl,
+      meetingCtl,
+      locationCtl,
+      remarkCtl,
+    ];
     if (!mounted) {
-      durationCtl.dispose();
-      meetingCtl.dispose();
-      locationCtl.dispose();
-      remarkCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     final saved = await showDialog<bool>(
@@ -518,7 +523,10 @@ class _EnterpriseCandidatesModulePageState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(ctx);
+              },
               child: const Text('取消'),
             ),
             FilledButton(
@@ -540,7 +548,7 @@ class _EnterpriseCandidatesModulePageState
                     'remark': _nullable(remarkCtl.text),
                   });
                   if (ctx.mounted) {
-                    FocusScope.of(ctx).unfocus();
+                    FocusManager.instance.primaryFocus?.unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -556,10 +564,7 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
-    durationCtl.dispose();
-    meetingCtl.dispose();
-    locationCtl.dispose();
-    remarkCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       widget.onMessage('面试安排成功');
     }
@@ -569,10 +574,9 @@ class _EnterpriseCandidatesModulePageState
     final minCtl = TextEditingController();
     final maxCtl = TextEditingController();
     final termCtl = TextEditingController();
+    final controllers = <TextEditingController>[minCtl, maxCtl, termCtl];
     if (!mounted) {
-      minCtl.dispose();
-      maxCtl.dispose();
-      termCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     DateTime? startDate;
@@ -666,12 +670,15 @@ class _EnterpriseCandidatesModulePageState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(ctx);
+              },
               child: const Text('取消'),
             ),
             FilledButton(
               onPressed: () {
-                FocusScope.of(ctx).unfocus();
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(ctx, <String, dynamic>{
                   'applicationId': applicationId,
                   'salaryMin': double.tryParse(minCtl.text.trim()),
@@ -692,9 +699,7 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
-    minCtl.dispose();
-    maxCtl.dispose();
-    termCtl.dispose();
+    _disposeControllersSafely(controllers);
 
     if (payload == null) {
       return;
@@ -711,8 +716,9 @@ class _EnterpriseCandidatesModulePageState
   Future<void> _openInterviewResultDialog(int interviewId) async {
     String result = 'pass';
     final noteCtl = TextEditingController();
+    final controllers = <TextEditingController>[noteCtl];
     if (!mounted) {
-      noteCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     final saved = await showDialog<bool>(
@@ -748,7 +754,10 @@ class _EnterpriseCandidatesModulePageState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                Navigator.pop(ctx, false);
+              },
               child: const Text('取消'),
             ),
             FilledButton(
@@ -760,7 +769,7 @@ class _EnterpriseCandidatesModulePageState
                     note: _nullable(noteCtl.text),
                   );
                   if (ctx.mounted) {
-                    FocusScope.of(ctx).unfocus();
+                    FocusManager.instance.primaryFocus?.unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -776,10 +785,20 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
-    noteCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       widget.onMessage('面试结果提交成功');
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   Future<void> _setStatusFilter(int? value) async {

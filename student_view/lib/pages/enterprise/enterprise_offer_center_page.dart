@@ -285,7 +285,7 @@ class EnterpriseOfferCenterPage extends StatelessWidget {
                     onMessage('候选人数据异常，请刷新后重试');
                     return;
                   }
-                  FocusScope.of(dialogContext).unfocus();
+                  FocusManager.instance.primaryFocus?.unfocus();
                   Navigator.of(dialogContext).pop({
                     'applicationId': appId,
                     'salaryMin': double.tryParse(minCtl.text.trim()),

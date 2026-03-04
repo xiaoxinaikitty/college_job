@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../viewmodels/student_home_view_model.dart';
+import 'student_report_create_page.dart';
+import 'student_review_create_page.dart';
 
 class StudentFeedbackCenterPage extends StatelessWidget {
   const StudentFeedbackCenterPage({
@@ -27,26 +29,55 @@ class StudentFeedbackCenterPage extends StatelessWidget {
           ),
           actions: [
             PopupMenuButton<String>(
-              onSelected: (value) {
+              onSelected: (value) async {
                 if (value == 'review') {
-                  _createReview(context);
+                  await _openReviewPage(context);
                 } else {
-                  _createReport(context);
+                  await _openReportPage(context);
                 }
               },
               itemBuilder: (_) => const [
-                PopupMenuItem(value: 'review', child: Text('提交评价')),
-                PopupMenuItem(value: 'report', child: Text('提交举报')),
+                PopupMenuItem(value: 'review', child: Text('去评价页面')),
+                PopupMenuItem(value: 'report', child: Text('去举报页面')),
               ],
             ),
           ],
         ),
         body: AnimatedBuilder(
           animation: vm,
-          builder: (_, __) => TabBarView(
+          builder: (_, __) => Column(
             children: [
-              _reviewsTab(),
-              _reportsTab(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => _openReviewPage(context),
+                        icon: const Icon(Icons.rate_review_outlined),
+                        label: const Text('去评价页面'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => _openReportPage(context),
+                        icon: const Icon(Icons.gpp_bad_outlined),
+                        label: const Text('去举报页面'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _reviewsTab(),
+                    _reportsTab(),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -194,6 +225,7 @@ class StudentFeedbackCenterPage extends StatelessWidget {
     int selectedIndex = 0;
     var rating = 5;
     final contentCtl = TextEditingController();
+    final controllers = <TextEditingController>[contentCtl];
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -243,7 +275,10 @@ class StudentFeedbackCenterPage extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
+                onPressed: () {
+                  FocusScope.of(dialogContext).unfocus();
+                  Navigator.of(dialogContext).pop(false);
+                },
                 child: const Text('取消'),
               ),
               FilledButton(
@@ -282,7 +317,7 @@ class StudentFeedbackCenterPage extends StatelessWidget {
         },
       ),
     );
-    contentCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       onMessage('评价提交成功');
       await _safeAction(vm.loadReviews);
@@ -294,6 +329,11 @@ class StudentFeedbackCenterPage extends StatelessWidget {
     final targetCtl = TextEditingController();
     final reasonCtl = TextEditingController();
     final evidenceCtl = TextEditingController();
+    final controllers = <TextEditingController>[
+      targetCtl,
+      reasonCtl,
+      evidenceCtl,
+    ];
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -340,7 +380,10 @@ class StudentFeedbackCenterPage extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
+                onPressed: () {
+                  FocusScope.of(dialogContext).unfocus();
+                  Navigator.of(dialogContext).pop(false);
+                },
                 child: const Text('取消'),
               ),
               FilledButton(
@@ -375,12 +418,40 @@ class StudentFeedbackCenterPage extends StatelessWidget {
         },
       ),
     );
-    targetCtl.dispose();
-    reasonCtl.dispose();
-    evidenceCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       onMessage('举报提交成功');
       await _safeAction(vm.loadReports);
+    }
+  }
+
+  Future<void> _openReviewPage(BuildContext context) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentReviewCreatePage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    if (changed == true) {
+      await _safeAction(() async {
+        await vm.loadReviews();
+        await vm.loadApplications();
+      });
+    }
+  }
+
+  Future<void> _openReportPage(BuildContext context) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentReportCreatePage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    if (changed == true) {
+      await _safeAction(() async {
+        await vm.loadReports();
+        await vm.loadConversations();
+      });
     }
   }
 
@@ -390,6 +461,16 @@ class StudentFeedbackCenterPage extends StatelessWidget {
     } catch (e) {
       onMessage(e.toString());
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   String _reportStatus(int status) {

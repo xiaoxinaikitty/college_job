@@ -341,7 +341,7 @@ class EnterpriseProfileModulePage extends StatelessWidget {
                 if (!dialogContext.mounted) {
                   return;
                 }
-                FocusScope.of(dialogContext).unfocus();
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.of(dialogContext).pop(true);
               } catch (e) {
                 onMessage(e.toString());
@@ -415,7 +415,7 @@ class EnterpriseProfileModulePage extends StatelessWidget {
                 if (!dialogContext.mounted) {
                   return;
                 }
-                FocusScope.of(dialogContext).unfocus();
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.of(dialogContext).pop(true);
               } catch (e) {
                 onMessage(e.toString());

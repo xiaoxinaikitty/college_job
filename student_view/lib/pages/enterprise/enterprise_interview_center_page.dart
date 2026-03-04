@@ -212,6 +212,12 @@ class _EnterpriseInterviewCenterPageState
     final meetingCtl = TextEditingController();
     final locationCtl = TextEditingController();
     final remarkCtl = TextEditingController();
+    final controllers = <TextEditingController>[
+      durationCtl,
+      meetingCtl,
+      locationCtl,
+      remarkCtl,
+    ];
 
     final saved = await showDialog<bool>(
       context: context,
@@ -301,7 +307,10 @@ class _EnterpriseInterviewCenterPageState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.of(dialogContext).pop(false);
+                },
                 child: const Text('取消'),
               ),
               FilledButton(
@@ -328,7 +337,7 @@ class _EnterpriseInterviewCenterPageState
                       'remark': _nullable(remarkCtl.text),
                     });
                     if (dialogContext.mounted) {
-                      FocusScope.of(dialogContext).unfocus();
+                      FocusManager.instance.primaryFocus?.unfocus();
                       Navigator.of(dialogContext).pop(true);
                     }
                   } catch (e) {
@@ -346,10 +355,7 @@ class _EnterpriseInterviewCenterPageState
       ),
     );
 
-    durationCtl.dispose();
-    meetingCtl.dispose();
-    locationCtl.dispose();
-    remarkCtl.dispose();
+    _disposeControllersSafely(controllers);
 
     if (saved == true) {
       widget.onMessage('面试安排成功');
@@ -359,6 +365,7 @@ class _EnterpriseInterviewCenterPageState
   Future<void> _openResultDialog(int interviewId) async {
     var result = 'pass';
     final noteCtl = TextEditingController();
+    final controllers = <TextEditingController>[noteCtl];
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -393,7 +400,10 @@ class _EnterpriseInterviewCenterPageState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.of(dialogContext).pop(false);
+                },
                 child: const Text('取消'),
               ),
               FilledButton(
@@ -405,7 +415,7 @@ class _EnterpriseInterviewCenterPageState
                       note: _nullable(noteCtl.text),
                     );
                     if (dialogContext.mounted) {
-                      FocusScope.of(dialogContext).unfocus();
+                      FocusManager.instance.primaryFocus?.unfocus();
                       Navigator.of(dialogContext).pop(true);
                     }
                   } catch (e) {
@@ -419,10 +429,20 @@ class _EnterpriseInterviewCenterPageState
         },
       ),
     );
-    noteCtl.dispose();
+    _disposeControllersSafely(controllers);
     if (saved == true) {
       widget.onMessage('面试结果提交成功');
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   List<Map<String, dynamic>> _filteredInterviews(

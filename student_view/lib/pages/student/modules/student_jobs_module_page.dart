@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../viewmodels/student_home_view_model.dart';
+import '../student_job_detail_page.dart';
 
 class StudentJobsModulePage extends StatefulWidget {
   const StudentJobsModulePage({
@@ -179,27 +180,24 @@ class _StudentJobsModulePageState extends State<StudentJobsModulePage> {
   }
 
   Future<void> _showJob(int jobId) async {
-    await _runAction(() async {
-      final detail = await widget.vm.jobDetail(jobId);
-      if (!mounted) {
-        return;
-      }
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(_toText(detail['title'])),
-          content: SingleChildScrollView(
-            child: Text(_toText(detail['description'])),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('关闭'),
-            ),
-          ],
+    final target = widget.vm.jobs.firstWhere(
+      (item) => _toInt(item['jobId']) == jobId,
+      orElse: () => <String, dynamic>{'jobId': jobId},
+    );
+    if (!mounted) {
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentJobDetailPage(
+          vm: widget.vm,
+          jobId: jobId,
+          jobSummary: target,
+          onMessage: widget.onMessage,
         ),
-      );
-    });
+      ),
+    );
   }
 
   Future<void> _applyJob(int jobId) async {

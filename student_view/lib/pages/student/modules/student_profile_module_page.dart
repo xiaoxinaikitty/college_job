@@ -1,7 +1,10 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../student_feedback_center_page.dart';
 import '../student_interviews_page.dart';
+import '../student_report_create_page.dart';
+import '../student_review_create_page.dart';
 import '../student_resume_editor_page.dart';
 import '../../../viewmodels/student_home_view_model.dart';
 
@@ -148,12 +151,16 @@ class StudentProfileModulePage extends StatelessWidget {
               spacing: 8,
               children: [
                 FilledButton.tonal(
-                  onPressed: () => _createReview(context),
+                  onPressed: () => _openReviewPage(context),
                   child: const Text('提交评价'),
                 ),
                 FilledButton.tonal(
-                  onPressed: () => _createReport(context),
+                  onPressed: () => _openReportPage(context),
                   child: const Text('提交举报'),
+                ),
+                FilledButton.tonal(
+                  onPressed: () => _openFeedbackCenter(context),
+                  child: const Text('历史记录'),
                 ),
               ],
             ),
@@ -299,14 +306,54 @@ class StudentProfileModulePage extends StatelessWidget {
     onMessage('简历更新成功');
   }
 
+  Future<void> _openReviewPage(BuildContext context) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentReviewCreatePage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    if (changed == true) {
+      await _runAction(vm.loadReviews);
+    }
+  }
+
+  Future<void> _openReportPage(BuildContext context) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentReportCreatePage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    if (changed == true) {
+      await _runAction(vm.loadReports);
+    }
+  }
+
+  Future<void> _openFeedbackCenter(BuildContext context) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentFeedbackCenterPage(vm: vm, onMessage: onMessage),
+      ),
+    );
+    await _runAction(() async {
+      await vm.loadReviews();
+      await vm.loadReports();
+    });
+  }
+
   Future<void> _createReview(BuildContext context) async {
     final appIdCtl = TextEditingController();
     final enterpriseIdCtl = TextEditingController();
     final contentCtl = TextEditingController();
+    final controllers = <TextEditingController>[
+      appIdCtl,
+      enterpriseIdCtl,
+      contentCtl,
+    ];
     if (!context.mounted) {
-      appIdCtl.dispose();
-      enterpriseIdCtl.dispose();
-      contentCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     await showDialog<void>(
@@ -339,7 +386,10 @@ class StudentProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () {
+              FocusScope.of(dialogContext).unfocus();
+              Navigator.of(dialogContext).pop();
+            },
             child: const Text('取消'),
           ),
           FilledButton(
@@ -372,17 +422,15 @@ class StudentProfileModulePage extends StatelessWidget {
         ],
       ),
     );
-    appIdCtl.dispose();
-    enterpriseIdCtl.dispose();
-    contentCtl.dispose();
+    _disposeControllersSafely(controllers);
   }
 
   Future<void> _createReport(BuildContext context) async {
     final targetIdCtl = TextEditingController();
     final reasonCtl = TextEditingController();
+    final controllers = <TextEditingController>[targetIdCtl, reasonCtl];
     if (!context.mounted) {
-      targetIdCtl.dispose();
-      reasonCtl.dispose();
+      _disposeControllersSafely(controllers);
       return;
     }
     await showDialog<void>(
@@ -409,7 +457,10 @@ class StudentProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () {
+              FocusScope.of(dialogContext).unfocus();
+              Navigator.of(dialogContext).pop();
+            },
             child: const Text('取消'),
           ),
           FilledButton(
@@ -438,8 +489,7 @@ class StudentProfileModulePage extends StatelessWidget {
         ],
       ),
     );
-    targetIdCtl.dispose();
-    reasonCtl.dispose();
+    _disposeControllersSafely(controllers);
   }
 
   String _extractBaseName(String fileName) {
@@ -456,6 +506,16 @@ class StudentProfileModulePage extends StatelessWidget {
     } catch (e) {
       onMessage(e.toString());
     }
+  }
+
+  void _disposeControllersSafely(List<TextEditingController> controllers) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 320), () {
+        for (final controller in controllers) {
+          controller.dispose();
+        }
+      });
+    });
   }
 
   String _toText(dynamic value) => value?.toString() ?? '-';
