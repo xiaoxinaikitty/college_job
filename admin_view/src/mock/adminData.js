@@ -28,6 +28,8 @@ export const dashboardTodo = [
   { id: 1, title: '处理企业资质审核待办', count: 28, route: '/admin/enterprise-audit' },
   { id: 2, title: '处理岗位审核待办', count: 64, route: '/admin/job-audit' },
   { id: 3, title: '处理举报工单', count: 19, route: '/admin/reports' },
+  { id: 4, title: '跟进投递流程预警', count: 12, route: '/admin/applications' },
+  { id: 5, title: '发布平台通知公告', count: 3, route: '/admin/notifications' },
 ]
 
 export function createEnterpriseAudits() {
@@ -286,24 +288,240 @@ export function createPenalties() {
   ]
 }
 
+export function createApplicationMonitors() {
+  return [
+    {
+      id: 61001,
+      applicationNo: 'AP20260304001',
+      studentName: '林同学',
+      enterpriseName: '星河智联科技有限公司',
+      jobTitle: 'Flutter 客户端实习生',
+      currentStage: '沟通中',
+      stageStatus: 'processing',
+      submittedAt: '2026-03-01 14:22',
+      lastActionAt: '2026-03-04 09:20',
+      overdueHours: 0,
+    },
+    {
+      id: 61002,
+      applicationNo: 'AP20260303098',
+      studentName: '王同学',
+      enterpriseName: '华屿智能制造股份有限公司',
+      jobTitle: 'Java 后端开发实习生',
+      currentStage: '面试中',
+      stageStatus: 'info',
+      submittedAt: '2026-02-28 10:01',
+      lastActionAt: '2026-03-03 16:30',
+      overdueHours: 18,
+    },
+    {
+      id: 61003,
+      applicationNo: 'AP20260302117',
+      studentName: '赵同学',
+      enterpriseName: '海岸创客教育科技',
+      jobTitle: 'AI 算法实习生',
+      currentStage: 'Offer阶段',
+      stageStatus: 'pending',
+      submittedAt: '2026-02-25 11:12',
+      lastActionAt: '2026-03-04 08:50',
+      overdueHours: 0,
+    },
+    {
+      id: 61004,
+      applicationNo: 'AP20260302088',
+      studentName: '陈同学',
+      enterpriseName: '天宸文化传媒有限公司',
+      jobTitle: '短视频运营实习生',
+      currentStage: '已淘汰',
+      stageStatus: 'danger',
+      submittedAt: '2026-02-24 09:45',
+      lastActionAt: '2026-03-02 13:10',
+      overdueHours: 0,
+    },
+  ]
+}
+
+export function createReviews() {
+  return [
+    {
+      id: 71001,
+      reviewer: '林同学',
+      enterpriseName: '星河智联科技有限公司',
+      rating: 5,
+      content: '面试流程规范，沟通及时，岗位信息与描述一致。',
+      status: 'normal',
+      statusLabel: '正常',
+      createdAt: '2026-03-03 18:23',
+    },
+    {
+      id: 71002,
+      reviewer: '王同学',
+      enterpriseName: '天宸文化传媒有限公司',
+      rating: 1,
+      content: '岗位存在诱导行为，且面试中出现不当言论。',
+      status: 'risk',
+      statusLabel: '风险',
+      createdAt: '2026-03-03 20:08',
+    },
+    {
+      id: 71003,
+      reviewer: '赵同学',
+      enterpriseName: '海岸创客教育科技',
+      rating: 4,
+      content: '整体体验不错，建议增加线上答疑环节。',
+      status: 'normal',
+      statusLabel: '正常',
+      createdAt: '2026-03-02 12:11',
+    },
+  ]
+}
+
+export function createNotifications() {
+  return [
+    {
+      id: 81001,
+      title: '清明节系统维护公告',
+      channel: '全站公告',
+      audience: '全体用户',
+      status: 'published',
+      statusLabel: '已发布',
+      publishAt: '2026-03-04 09:00',
+    },
+    {
+      id: 81002,
+      title: '企业审核资料补充提醒',
+      channel: '站内消息',
+      audience: '待审核企业',
+      status: 'draft',
+      statusLabel: '草稿',
+      publishAt: '-',
+    },
+    {
+      id: 81003,
+      title: 'Offer 处理时效提示',
+      channel: '站内消息',
+      audience: '学生用户',
+      status: 'published',
+      statusLabel: '已发布',
+      publishAt: '2026-03-03 16:20',
+    },
+  ]
+}
+
+export function createReviewRules() {
+  return [
+    {
+      id: 91001,
+      module: '企业资质审核',
+      ruleName: '营业执照清晰度校验',
+      hitCondition: '图片分辨率低于 800x800',
+      action: '标记高风险并转人工复核',
+      enabled: true,
+      updatedAt: '2026-03-04 08:50',
+    },
+    {
+      id: 91002,
+      module: '岗位审核',
+      ruleName: '引流关键词识别',
+      hitCondition: '命中联系方式/返利等敏感词',
+      action: '直接驳回并记录风控日志',
+      enabled: true,
+      updatedAt: '2026-03-04 09:00',
+    },
+    {
+      id: 91003,
+      module: '举报治理',
+      ruleName: '重复举报聚合',
+      hitCondition: '同对象 24h 内举报 >= 3 次',
+      action: '自动升级为优先工单',
+      enabled: false,
+      updatedAt: '2026-03-02 14:35',
+    },
+  ]
+}
+
+export function createSystemLogs() {
+  return [
+    {
+      id: 100001,
+      operator: 'admin',
+      action: '通过企业资质审核',
+      target: '星河智联科技有限公司',
+      module: '企业审核',
+      ip: '192.168.1.120',
+      result: '成功',
+      createdAt: '2026-03-04 09:18:22',
+    },
+    {
+      id: 100002,
+      operator: 'admin',
+      action: '驳回岗位审核',
+      target: '短视频运营实习生',
+      module: '岗位审核',
+      ip: '192.168.1.120',
+      result: '成功',
+      createdAt: '2026-03-04 09:10:03',
+    },
+    {
+      id: 100003,
+      operator: 'audit_chen',
+      action: '举报工单结案',
+      target: 'RP20260303087',
+      module: '举报处理',
+      ip: '192.168.1.121',
+      result: '成功',
+      createdAt: '2026-03-04 08:58:09',
+    },
+  ]
+}
+
 export const rolePermissions = [
   {
     role: 'super_admin',
     roleLabel: '超级管理员',
     members: 1,
-    permissions: ['dashboard:view', 'enterpriseAudit:view', 'jobAudit:view', 'users:view', 'reports:view', 'penalties:view', 'permissions:view'],
+    permissions: [
+      'dashboard:view',
+      'enterpriseAudit:view',
+      'jobAudit:view',
+      'users:view',
+      'applications:view',
+      'reports:view',
+      'reviews:view',
+      'penalties:view',
+      'notifications:view',
+      'rules:view',
+      'logs:view',
+      'permissions:view',
+    ],
   },
   {
     role: 'auditor',
     roleLabel: '审核专员',
     members: 4,
-    permissions: ['dashboard:view', 'enterpriseAudit:view', 'jobAudit:view', 'reports:view'],
+    permissions: [
+      'dashboard:view',
+      'enterpriseAudit:view',
+      'jobAudit:view',
+      'applications:view',
+      'reports:view',
+      'reviews:view',
+      'logs:view',
+    ],
   },
   {
     role: 'operator',
     roleLabel: '运营专员',
     members: 3,
-    permissions: ['dashboard:view', 'users:view', 'reports:view', 'penalties:view'],
+    permissions: [
+      'dashboard:view',
+      'users:view',
+      'applications:view',
+      'reports:view',
+      'reviews:view',
+      'penalties:view',
+      'notifications:view',
+    ],
   },
 ]
 
@@ -312,8 +530,13 @@ export const permissionMap = [
   { key: 'enterpriseAudit:view', label: '企业资质审核' },
   { key: 'jobAudit:view', label: '岗位审核' },
   { key: 'users:view', label: '用户管理' },
+  { key: 'applications:view', label: '投递流程监控' },
   { key: 'reports:view', label: '举报处理' },
+  { key: 'reviews:view', label: '评价管理' },
   { key: 'penalties:view', label: '处罚记录' },
+  { key: 'notifications:view', label: '通知中心' },
+  { key: 'rules:view', label: '审核策略' },
+  { key: 'logs:view', label: '系统日志' },
   { key: 'permissions:view', label: '权限中心' },
 ]
 

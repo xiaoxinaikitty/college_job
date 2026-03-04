@@ -1,17 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { adminApi } from '../services/adminApi'
 
 const AUTH_KEY = 'college-job-admin-auth'
-
-const SUPER_ADMIN_PERMISSIONS = [
-  'dashboard:view',
-  'enterpriseAudit:view',
-  'jobAudit:view',
-  'users:view',
-  'reports:view',
-  'penalties:view',
-  'permissions:view',
-]
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref('')
@@ -35,29 +26,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function login(account, password) {
-    const cleanAccount = account.trim()
-    const cleanPassword = password.trim()
-    if (cleanAccount !== 'admin' || cleanPassword !== '123456') {
-      throw new Error('账号或密码错误，请使用管理员测试账号登录')
-    }
-    token.value = `mock-token-${Date.now()}`
-    user.value = {
-      id: 1,
-      name: '平台系统管理员',
-      role: 'super_admin',
-      roleLabel: '超级管理员',
-      avatarText: 'AD',
-    }
-    permissions.value = [...SUPER_ADMIN_PERMISSIONS]
+  async function login(account, password) {
+    const result = await adminApi.login({
+      account: account.trim(),
+      password: password.trim(),
+    })
+    token.value = result?.token || ''
+    user.value = result?.user || null
+    permissions.value = Array.isArray(result?.permissions) ? result.permissions : []
     persist()
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await adminApi.logout()
+    } catch {
+      // ignore logout request failures
+    }
     token.value = ''
     user.value = null
     permissions.value = []
     localStorage.removeItem(AUTH_KEY)
+  }
+
+  async function refreshMe() {
+    if (!token.value) {
+      return
+    }
+    const result = await adminApi.me()
+    user.value = result?.user || user.value
+    if (Array.isArray(result?.permissions)) {
+      permissions.value = result.permissions
+    }
+    persist()
   }
 
   function hasPermission(permissionKey) {
@@ -90,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     logout,
+    refreshMe,
     hasPermission,
   }
 })

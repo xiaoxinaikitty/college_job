@@ -55,6 +55,9 @@ function isActive(path) {
   color: #cbd5e1;
   padding: 18px 14px;
   transition: width 0.24s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .sidebar.collapsed {
@@ -99,6 +102,8 @@ function isActive(path) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .menu-item {

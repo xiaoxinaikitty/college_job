@@ -190,7 +190,7 @@ class StudentInterviewDetailPage extends StatelessWidget {
               style: const TextStyle(color: Color(0xFF697386), fontSize: 13),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(child:   Text(value)),
         ],
       ),
     );

@@ -1,13 +1,44 @@
 <script setup>
-import { computed } from 'vue'
-import { adminAccounts, permissionMap, rolePermissions } from '../../mock/adminData'
+import { computed, onMounted, ref } from 'vue'
+import { adminApi, formatDateTime } from '../../services/adminApi'
+
+const rolePermissions = ref([])
+const permissionMap = ref([])
+const adminAccounts = ref([])
 
 const roleMatrix = computed(() =>
-  rolePermissions.map((role) => ({
+  rolePermissions.value.map((role) => ({
     ...role,
-    permissionSet: new Set(role.permissions),
+    permissionSet: new Set(role.permissions || []),
   })),
 )
+
+async function loadData() {
+  try {
+    const [permissions, roles, accounts] = await Promise.all([
+      adminApi.listPermissions(),
+      adminApi.listRoles(),
+      adminApi.listAccounts(),
+    ])
+    permissionMap.value = Array.isArray(permissions) ? permissions : []
+    rolePermissions.value = Array.isArray(roles) ? roles : []
+    adminAccounts.value = Array.isArray(accounts)
+      ? accounts.map((item) => ({
+          ...item,
+          lastLoginAt: formatDateTime(item.lastLoginAt),
+        }))
+      : []
+  } catch (error) {
+    console.error(error)
+    permissionMap.value = []
+    rolePermissions.value = []
+    adminAccounts.value = []
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>

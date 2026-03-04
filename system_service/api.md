@@ -504,3 +504,58 @@ X-User-Id: 2
 8. 学生查看面试安排、查看Offer并处理。  
 9. 流程结束后提交评价或举报。  
 
+
+---
+
+## 5. 管理员端接口（/api/admin）
+
+### 5.1 登录与会话
+- `POST /api/admin/auth/login`
+- `GET /api/admin/auth/me`
+- `POST /api/admin/auth/logout`
+
+### 5.2 运营看板
+- `GET /api/admin/dashboard/metrics`
+- `GET /api/admin/dashboard/trend?days=7`
+- `GET /api/admin/dashboard/pipeline`
+- `GET /api/admin/dashboard/todos`
+
+### 5.3 审核与治理
+- `GET /api/admin/enterprise-audits`
+- `GET /api/admin/enterprise-audits/{id}`
+- `POST /api/admin/enterprise-audits/{id}/approve`
+- `POST /api/admin/enterprise-audits/{id}/reject`
+- `GET /api/admin/job-audits`
+- `GET /api/admin/job-audits/{id}`
+- `POST /api/admin/job-audits/{id}/approve`
+- `POST /api/admin/job-audits/{id}/reject`
+- `GET /api/admin/reports`
+- `POST /api/admin/reports/{id}/accept`
+- `POST /api/admin/reports/{id}/close`
+- `GET /api/admin/reviews`
+- `POST /api/admin/reviews/{id}/status`
+- `GET /api/admin/penalties`
+- `POST /api/admin/penalties`
+- `POST /api/admin/penalties/{id}/revoke`
+
+### 5.4 运营与系统管理
+- `GET /api/admin/users`
+- `GET /api/admin/users/{id}`
+- `POST /api/admin/users/{id}/status`
+- `POST /api/admin/users/{id}/freeze`
+- `GET /api/admin/application-monitors`
+- `GET /api/admin/application-monitors/{id}`
+- `GET /api/admin/notifications`
+- `POST /api/admin/notifications`
+- `POST /api/admin/notifications/{id}/publish`
+- `GET /api/admin/rules`
+- `POST /api/admin/rules/{id}/toggle`
+- `GET /api/admin/logs`
+- `GET /api/admin/permissions`
+- `GET /api/admin/roles`
+- `PUT /api/admin/roles/{role}/permissions`
+- `GET /api/admin/accounts`
+
+说明：
+- 管理员接口当前同样支持 `X-User-Id` 方式传递管理员身份，便于本地联调。
+- 完整字段以 `D:\ChxySystem\College_Jop_System\liantiao.md` 为准。

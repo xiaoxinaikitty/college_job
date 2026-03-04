@@ -1,13 +1,15 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppModal from '../../components/ui/AppModal.vue'
 import PaginationBar from '../../components/ui/PaginationBar.vue'
 import StatusBadge from '../../components/ui/StatusBadge.vue'
-import { createJobAudits } from '../../mock/adminData'
+import { adminApi, formatDateTime } from '../../services/adminApi'
 
-const rows = ref(createJobAudits())
+const rows = ref([])
+const total = ref(0)
 const page = ref(1)
 const pageSize = 10
+const loading = ref(false)
 
 const filters = reactive({
   keyword: '',
@@ -20,25 +22,35 @@ const detailVisible = ref(false)
 const current = ref(null)
 const rejectReason = ref('')
 
-const filteredRows = computed(() =>
-  rows.value.filter((row) => {
-    const keyword = filters.keyword.trim().toLowerCase()
-    const passKeyword =
-      !keyword ||
-      row.title.toLowerCase().includes(keyword) ||
-      row.enterpriseName.toLowerCase().includes(keyword)
-    const passStatus = !filters.status || row.status === filters.status
-    const passCity = !filters.city || row.city === filters.city
-    return passKeyword && passStatus && passCity
-  }),
-)
+const cities = computed(() => Array.from(new Set(rows.value.map((item) => item.city).filter(Boolean))))
 
-const displayRows = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
-})
+function normalizeRow(row) {
+  return {
+    ...row,
+    submittedAt: formatDateTime(row.submittedAt),
+  }
+}
 
-const cities = computed(() => Array.from(new Set(rows.value.map((item) => item.city))))
+async function loadRows() {
+  loading.value = true
+  try {
+    const data = await adminApi.listJobAudits({
+      page: page.value,
+      pageSize,
+      keyword: filters.keyword.trim(),
+      status: filters.status,
+      city: filters.city,
+    })
+    rows.value = Array.isArray(data?.records) ? data.records.map(normalizeRow) : []
+    total.value = data?.total || 0
+  } catch (error) {
+    console.error(error)
+    rows.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
 
 function statusType(status) {
   if (status === 'approved') {
@@ -50,15 +62,23 @@ function statusType(status) {
   return 'pending'
 }
 
-function openDetail(row) {
-  current.value = row
-  detailVisible.value = true
+async function openDetail(row) {
+  try {
+    const detail = await adminApi.jobAuditDetail(row.id)
+    current.value = normalizeRow(detail)
+    detailVisible.value = true
+  } catch (error) {
+    console.error(error)
+  }
 }
 
-function approveRow(row) {
-  row.status = 'approved'
-  row.statusLabel = '已上线'
-  row.reason = ''
+async function approveRow(row) {
+  try {
+    await adminApi.approveJobAudit(row.id)
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function openReject(row) {
@@ -67,15 +87,34 @@ function openReject(row) {
   rejectVisible.value = true
 }
 
-function submitReject() {
+async function submitReject() {
   if (!current.value || !rejectReason.value.trim()) {
     return
   }
-  current.value.status = 'rejected'
-  current.value.statusLabel = '已驳回'
-  current.value.reason = rejectReason.value.trim()
-  rejectVisible.value = false
+  try {
+    await adminApi.rejectJobAudit(current.value.id, rejectReason.value.trim())
+    rejectVisible.value = false
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
 }
+
+watch(
+  () => [filters.keyword, filters.status, filters.city],
+  () => {
+    page.value = 1
+    loadRows()
+  },
+)
+
+watch(page, () => {
+  loadRows()
+})
+
+onMounted(() => {
+  loadRows()
+})
 </script>
 
 <template>
@@ -112,7 +151,7 @@ function submitReject() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in displayRows" :key="row.id">
+            <tr v-for="row in rows" :key="row.id">
               <td>#{{ row.id }}</td>
               <td>{{ row.title }}</td>
               <td>{{ row.enterpriseName }}</td>
@@ -134,7 +173,7 @@ function submitReject() {
                 <button class="btn btn-danger" @click="openReject(row)">驳回</button>
               </td>
             </tr>
-            <tr v-if="!displayRows.length">
+            <tr v-if="!rows.length && !loading">
               <td colspan="10" class="empty">暂无符合条件的岗位审核数据</td>
             </tr>
           </tbody>
@@ -144,7 +183,7 @@ function submitReject() {
       <PaginationBar
         :page="page"
         :page-size="pageSize"
-        :total="filteredRows.length"
+        :total="total"
         @update:page="page = $event"
       />
     </article>

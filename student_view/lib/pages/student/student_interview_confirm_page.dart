@@ -219,7 +219,7 @@ class _StudentInterviewConfirmPageState
       await widget.vm.submitInterviewConfirmation(
         interviewId: interviewId,
         action: _action,
-        note: note.isEmpty ? null : note,
+        note: note.isEmpty  ? null : note,
         expectedRescheduleAt: _expectedAt,
       );
       if (!mounted) {

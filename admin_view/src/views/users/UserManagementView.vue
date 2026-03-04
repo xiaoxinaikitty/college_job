@@ -1,13 +1,15 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import AppModal from '../../components/ui/AppModal.vue'
 import PaginationBar from '../../components/ui/PaginationBar.vue'
 import StatusBadge from '../../components/ui/StatusBadge.vue'
-import { createUsers } from '../../mock/adminData'
+import { adminApi, formatDateTime } from '../../services/adminApi'
 
-const rows = ref(createUsers())
+const rows = ref([])
+const total = ref(0)
 const page = ref(1)
 const pageSize = 10
+const loading = ref(false)
 
 const filters = reactive({
   keyword: '',
@@ -18,42 +20,65 @@ const filters = reactive({
 const detailVisible = ref(false)
 const current = ref(null)
 
-const filteredRows = computed(() =>
-  rows.value.filter((row) => {
-    const keyword = filters.keyword.trim().toLowerCase()
-    const passKeyword =
-      !keyword ||
-      row.nickname.toLowerCase().includes(keyword) ||
-      row.phone.toLowerCase().includes(keyword)
-    const passType = !filters.userType || row.userType === filters.userType
-    const passStatus = !filters.status || row.status === filters.status
-    return passKeyword && passType && passStatus
-  }),
-)
-
-const displayRows = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
-})
-
-function openDetail(row) {
-  current.value = row
-  detailVisible.value = true
-}
-
-function toggleStatus(row) {
-  if (row.status === 'active') {
-    row.status = 'disabled'
-    row.statusLabel = '已禁用'
-    return
+function normalizeRow(row) {
+  return {
+    ...row,
+    registerAt: formatDateTime(row.registerAt),
+    lastLoginAt: formatDateTime(row.lastLoginAt),
   }
-  row.status = 'active'
-  row.statusLabel = '正常'
 }
 
-function freezeUser(row) {
-  row.status = 'frozen'
-  row.statusLabel = '冻结中'
+async function loadRows() {
+  loading.value = true
+  try {
+    const data = await adminApi.listUsers({
+      page: page.value,
+      pageSize,
+      keyword: filters.keyword.trim(),
+      userType: filters.userType,
+      status: filters.status,
+    })
+    rows.value = Array.isArray(data?.records) ? data.records.map(normalizeRow) : []
+    total.value = data?.total || 0
+  } catch (error) {
+    console.error(error)
+    rows.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+async function openDetail(row) {
+  try {
+    const detail = await adminApi.userDetail(row.id)
+    current.value = normalizeRow(detail)
+    detailVisible.value = true
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function toggleStatus(row) {
+  const nextStatus = row.status === 'active' ? 'disabled' : 'active'
+  try {
+    await adminApi.updateUserStatus(row.id, nextStatus)
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function freezeUser(row) {
+  try {
+    await adminApi.freezeUser(row.id, {
+      durationDays: 7,
+      reason: '违规行为处理',
+    })
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function statusType(status) {
@@ -65,6 +90,22 @@ function statusType(status) {
   }
   return 'pending'
 }
+
+watch(
+  () => [filters.keyword, filters.userType, filters.status],
+  () => {
+    page.value = 1
+    loadRows()
+  },
+)
+
+watch(page, () => {
+  loadRows()
+})
+
+onMounted(() => {
+  loadRows()
+})
 </script>
 
 <template>
@@ -101,7 +142,7 @@ function statusType(status) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in displayRows" :key="row.id">
+            <tr v-for="row in rows" :key="row.id">
               <td>#{{ row.id }}</td>
               <td>{{ row.nickname }}</td>
               <td>{{ row.phone }}</td>
@@ -118,7 +159,7 @@ function statusType(status) {
                 <button class="btn btn-danger" @click="freezeUser(row)">冻结</button>
               </td>
             </tr>
-            <tr v-if="!displayRows.length">
+            <tr v-if="!rows.length && !loading">
               <td colspan="9" class="empty">暂无符合筛选条件的用户</td>
             </tr>
           </tbody>
@@ -128,7 +169,7 @@ function statusType(status) {
       <PaginationBar
         :page="page"
         :page-size="pageSize"
-        :total="filteredRows.length"
+        :total="total"
         @update:page="page = $event"
       />
     </article>

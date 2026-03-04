@@ -32,9 +32,9 @@ function onToggleSidebar() {
   collapsed.value = !collapsed.value
 }
 
-function onLogout() {
-  authStore.logout()
-  router.replace('/login')
+async function onLogout() {
+  await authStore.logout()
+  await router.replace('/login')
 }
 </script>
 

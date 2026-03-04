@@ -28,6 +28,13 @@ export const adminNavItems = [
     permission: 'users:view',
   },
   {
+    key: 'applications',
+    label: '流程监控',
+    icon: 'LC',
+    path: '/admin/applications',
+    permission: 'applications:view',
+  },
+  {
     key: 'reports',
     label: '举报处理',
     icon: 'JB',
@@ -35,11 +42,39 @@ export const adminNavItems = [
     permission: 'reports:view',
   },
   {
+    key: 'reviews',
+    label: '评价管理',
+    icon: 'PJ',
+    path: '/admin/reviews',
+    permission: 'reviews:view',
+  },
+  {
     key: 'penalties',
     label: '处罚记录',
     icon: 'CF',
     path: '/admin/penalties',
     permission: 'penalties:view',
+  },
+  {
+    key: 'notifications',
+    label: '通知中心',
+    icon: 'TZ',
+    path: '/admin/notifications',
+    permission: 'notifications:view',
+  },
+  {
+    key: 'rules',
+    label: '审核策略',
+    icon: 'CL',
+    path: '/admin/rules',
+    permission: 'rules:view',
+  },
+  {
+    key: 'logs',
+    label: '系统日志',
+    icon: 'RZ',
+    path: '/admin/logs',
+    permission: 'logs:view',
   },
   {
     key: 'permissions',

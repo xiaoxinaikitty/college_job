@@ -1,13 +1,15 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import AppModal from '../../components/ui/AppModal.vue'
 import PaginationBar from '../../components/ui/PaginationBar.vue'
 import StatusBadge from '../../components/ui/StatusBadge.vue'
-import { createEnterpriseAudits } from '../../mock/adminData'
+import { adminApi, formatDateTime } from '../../services/adminApi'
 
-const rows = ref(createEnterpriseAudits())
+const rows = ref([])
+const total = ref(0)
 const page = ref(1)
 const pageSize = 10
+const loading = ref(false)
 
 const filters = reactive({
   keyword: '',
@@ -19,40 +21,74 @@ const detailVisible = ref(false)
 const rejectVisible = ref(false)
 const current = ref(null)
 const rejectReason = ref('')
-
-const filteredRows = computed(() =>
-  rows.value.filter((row) => {
-    const keyword = filters.keyword.trim().toLowerCase()
-    const passKeyword =
-      !keyword ||
-      row.enterpriseName.toLowerCase().includes(keyword) ||
-      row.creditCode.toLowerCase().includes(keyword)
-    const passStatus = !filters.status || row.status === filters.status
-    const passRisk = !filters.riskLevel || row.riskLevel === filters.riskLevel
-    return passKeyword && passStatus && passRisk
-  }),
-)
-
-const displayRows = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
+const stats = ref({
+  pending: 0,
+  approved: 0,
+  rejected: 0,
 })
 
-const stats = computed(() => ({
-  pending: rows.value.filter((item) => item.status === 'pending').length,
-  approved: rows.value.filter((item) => item.status === 'approved').length,
-  rejected: rows.value.filter((item) => item.status === 'rejected').length,
-}))
-
-function openDetail(row) {
-  current.value = row
-  detailVisible.value = true
+function normalizeRow(row) {
+  return {
+    ...row,
+    submittedAt: formatDateTime(row.submittedAt),
+  }
 }
 
-function approveRow(row) {
-  row.status = 'approved'
-  row.statusLabel = '已通过'
-  row.note = '管理员审核通过'
+async function loadRows() {
+  loading.value = true
+  try {
+    const data = await adminApi.listEnterpriseAudits({
+      page: page.value,
+      pageSize,
+      keyword: filters.keyword.trim(),
+      status: filters.status,
+      riskLevel: filters.riskLevel,
+    })
+    rows.value = Array.isArray(data?.records) ? data.records.map(normalizeRow) : []
+    total.value = data?.total || 0
+  } catch (error) {
+    console.error(error)
+    rows.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadStats() {
+  try {
+    const [pending, approved, rejected] = await Promise.all([
+      adminApi.listEnterpriseAudits({ page: 1, pageSize: 1, status: 'pending' }),
+      adminApi.listEnterpriseAudits({ page: 1, pageSize: 1, status: 'approved' }),
+      adminApi.listEnterpriseAudits({ page: 1, pageSize: 1, status: 'rejected' }),
+    ])
+    stats.value = {
+      pending: pending?.total || 0,
+      approved: approved?.total || 0,
+      rejected: rejected?.total || 0,
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function openDetail(row) {
+  try {
+    const detail = await adminApi.enterpriseAuditDetail(row.id)
+    current.value = normalizeRow(detail)
+    detailVisible.value = true
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function approveRow(row) {
+  try {
+    await adminApi.approveEnterpriseAudit(row.id, '资料齐全，审核通过')
+    await Promise.all([loadRows(), loadStats()])
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function openReject(row) {
@@ -61,7 +97,7 @@ function openReject(row) {
   rejectVisible.value = true
 }
 
-function submitReject() {
+async function submitReject() {
   if (!current.value) {
     return
   }
@@ -69,10 +105,13 @@ function submitReject() {
   if (!reason) {
     return
   }
-  current.value.status = 'rejected'
-  current.value.statusLabel = '已驳回'
-  current.value.note = reason
-  rejectVisible.value = false
+  try {
+    await adminApi.rejectEnterpriseAudit(current.value.id, reason)
+    rejectVisible.value = false
+    await Promise.all([loadRows(), loadStats()])
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function statusType(status) {
@@ -84,6 +123,23 @@ function statusType(status) {
   }
   return 'pending'
 }
+
+watch(
+  () => [filters.keyword, filters.status, filters.riskLevel],
+  () => {
+    page.value = 1
+    loadRows()
+  },
+)
+
+watch(page, () => {
+  loadRows()
+})
+
+onMounted(() => {
+  loadRows()
+  loadStats()
+})
 </script>
 
 <template>
@@ -135,7 +191,7 @@ function statusType(status) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in displayRows" :key="row.id">
+            <tr v-for="row in rows" :key="row.id">
               <td>#{{ row.id }}</td>
               <td>{{ row.enterpriseName }}</td>
               <td>{{ row.creditCode }}</td>
@@ -157,7 +213,7 @@ function statusType(status) {
                 <button class="btn btn-danger" @click="openReject(row)">驳回</button>
               </td>
             </tr>
-            <tr v-if="!displayRows.length">
+            <tr v-if="!rows.length && !loading">
               <td colspan="8" class="empty">暂无符合条件的数据</td>
             </tr>
           </tbody>
@@ -167,7 +223,7 @@ function statusType(status) {
       <PaginationBar
         :page="page"
         :page-size="pageSize"
-        :total="filteredRows.length"
+        :total="total"
         @update:page="page = $event"
       />
     </article>

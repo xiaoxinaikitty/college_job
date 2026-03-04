@@ -1,19 +1,27 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MetricCard from '../../components/ui/MetricCard.vue'
 import StatusBadge from '../../components/ui/StatusBadge.vue'
-import {
-  dashboardMetrics,
-  dashboardPipeline,
-  dashboardTodo,
-  dashboardTrend,
-} from '../../mock/adminData'
+import { adminApi } from '../../services/adminApi'
 
 const router = useRouter()
+const dashboardMetrics = ref([])
+const dashboardPipeline = ref([])
+const dashboardTodo = ref([])
+const dashboardTrend = ref([])
+
+const METRIC_CONFIG = [
+  { key: 'register', label: '今日新增注册' },
+  { key: 'jobs', label: '在线岗位数' },
+  { key: 'applications', label: '投递总量' },
+  { key: 'interviews', label: '面试总量' },
+  { key: 'offers', label: 'Offer 发放量' },
+  { key: 'hired', label: '录用达成量' },
+]
 
 const maxApplication = computed(() =>
-  Math.max(...dashboardTrend.map((item) => item.application), 1),
+  Math.max(...dashboardTrend.value.map((item) => item.application), 1),
 )
 
 function openTodo(routePath) {
@@ -32,6 +40,37 @@ function toStatusType(type) {
   }
   return 'info'
 }
+
+async function loadDashboard() {
+  try {
+    const [metricsRaw, trendRaw, pipelineRaw, todosRaw] = await Promise.all([
+      adminApi.dashboardMetrics(),
+      adminApi.dashboardTrend(7),
+      adminApi.dashboardPipeline(),
+      adminApi.dashboardTodos(),
+    ])
+
+    dashboardMetrics.value = METRIC_CONFIG.map((cfg) => {
+      const item = metricsRaw?.[cfg.key] || {}
+      return {
+        key: cfg.key,
+        label: cfg.label,
+        value: item.value ?? 0,
+        trend: `${item.trend ?? 0}%`,
+        trendUp: Boolean(item.trendUp),
+      }
+    })
+    dashboardTrend.value = Array.isArray(trendRaw) ? trendRaw : []
+    dashboardPipeline.value = Array.isArray(pipelineRaw) ? pipelineRaw : []
+    dashboardTodo.value = Array.isArray(todosRaw) ? todosRaw : []
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(() => {
+  loadDashboard()
+})
 </script>
 
 <template>

@@ -15,6 +15,8 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
 
     Optional<Resume> findByIdAndStudentUserId(Long id, Long studentUserId);
 
+    long countByStudentUserId(Long studentUserId);
+
     @Modifying
     @Transactional
     @Query("update Resume r set r.isDefault = 0 where r.studentUserId = :studentUserId")

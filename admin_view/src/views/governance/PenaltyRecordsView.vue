@@ -1,13 +1,15 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import AppModal from '../../components/ui/AppModal.vue'
 import PaginationBar from '../../components/ui/PaginationBar.vue'
 import StatusBadge from '../../components/ui/StatusBadge.vue'
-import { createPenalties } from '../../mock/adminData'
+import { adminApi, formatDateTime } from '../../services/adminApi'
 
-const rows = ref(createPenalties())
+const rows = ref([])
+const total = ref(0)
 const page = ref(1)
 const pageSize = 10
+const loading = ref(false)
 
 const filters = reactive({
   keyword: '',
@@ -24,23 +26,33 @@ const createForm = reactive({
   reason: '',
 })
 
-const filteredRows = computed(() =>
-  rows.value.filter((row) => {
-    const keyword = filters.keyword.trim().toLowerCase()
-    const passKeyword =
-      !keyword ||
-      row.target.toLowerCase().includes(keyword) ||
-      row.action.toLowerCase().includes(keyword)
-    const passType = !filters.targetType || row.targetType === filters.targetType
-    const passStatus = !filters.status || row.status === filters.status
-    return passKeyword && passType && passStatus
-  }),
-)
+function normalizeRow(row) {
+  return {
+    ...row,
+    createdAt: formatDateTime(row.createdAt),
+  }
+}
 
-const displayRows = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredRows.value.slice(start, start + pageSize)
-})
+async function loadRows() {
+  loading.value = true
+  try {
+    const data = await adminApi.listPenalties({
+      page: page.value,
+      pageSize,
+      keyword: filters.keyword.trim(),
+      targetType: filters.targetType,
+      status: filters.status,
+    })
+    rows.value = Array.isArray(data?.records) ? data.records.map(normalizeRow) : []
+    total.value = data?.total || 0
+  } catch (error) {
+    console.error(error)
+    rows.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
 
 function statusType(status) {
   if (status === 'effective') {
@@ -49,9 +61,13 @@ function statusType(status) {
   return 'success'
 }
 
-function revoke(row) {
-  row.status = 'expired'
-  row.statusLabel = '已结束'
+async function revoke(row) {
+  try {
+    await adminApi.revokePenalty(row.id, '复核后撤销')
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function openCreate() {
@@ -63,24 +79,41 @@ function openCreate() {
   createVisible.value = true
 }
 
-function submitCreate() {
+async function submitCreate() {
   if (!createForm.target.trim() || !createForm.action.trim() || !createForm.reason.trim()) {
     return
   }
-  rows.value.unshift({
-    id: Date.now(),
-    target: createForm.target.trim(),
-    targetType: createForm.targetType,
-    action: createForm.action.trim(),
-    severity: createForm.severity,
-    status: 'effective',
-    statusLabel: '生效中',
-    operator: '系统管理员',
-    createdAt: new Date().toLocaleString('zh-CN', { hour12: false }),
-    reason: createForm.reason.trim(),
-  })
-  createVisible.value = false
+  try {
+    await adminApi.createPenalty({
+      target: createForm.target.trim(),
+      targetType: createForm.targetType,
+      action: createForm.action.trim(),
+      severity: createForm.severity,
+      reason: createForm.reason.trim(),
+    })
+    createVisible.value = false
+    page.value = 1
+    await loadRows()
+  } catch (error) {
+    console.error(error)
+  }
 }
+
+watch(
+  () => [filters.keyword, filters.targetType, filters.status],
+  () => {
+    page.value = 1
+    loadRows()
+  },
+)
+
+watch(page, () => {
+  loadRows()
+})
+
+onMounted(() => {
+  loadRows()
+})
 </script>
 
 <template>
@@ -120,7 +153,7 @@ function submitCreate() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in displayRows" :key="row.id">
+            <tr v-for="row in rows" :key="row.id">
               <td>#{{ row.id }}</td>
               <td>{{ row.target }}</td>
               <td>{{ row.targetType }}</td>
@@ -142,7 +175,7 @@ function submitCreate() {
                 </button>
               </td>
             </tr>
-            <tr v-if="!displayRows.length">
+            <tr v-if="!rows.length && !loading">
               <td colspan="10" class="empty">暂无处罚记录</td>
             </tr>
           </tbody>
@@ -151,7 +184,7 @@ function submitCreate() {
       <PaginationBar
         :page="page"
         :page-size="pageSize"
-        :total="filteredRows.length"
+        :total="total"
         @update:page="page = $event"
       />
     </article>

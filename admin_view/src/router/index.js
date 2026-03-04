@@ -68,6 +68,16 @@ const routes = [
         },
       },
       {
+        path: 'applications',
+        name: 'applications',
+        component: () => import('../views/operations/ApplicationMonitorView.vue'),
+        meta: {
+          title: '投递流程监控',
+          subtitle: '追踪投递到录用全链路转化与超时预警',
+          permission: 'applications:view',
+        },
+      },
+      {
         path: 'reports',
         name: 'reports',
         component: () => import('../views/governance/ReportCenterView.vue'),
@@ -78,6 +88,16 @@ const routes = [
         },
       },
       {
+        path: 'reviews',
+        name: 'reviews',
+        component: () => import('../views/governance/ReviewManagementView.vue'),
+        meta: {
+          title: '评价管理',
+          subtitle: '查看学生评价并处理异常评价内容',
+          permission: 'reviews:view',
+        },
+      },
+      {
         path: 'penalties',
         name: 'penalties',
         component: () => import('../views/governance/PenaltyRecordsView.vue'),
@@ -85,6 +105,36 @@ const routes = [
           title: '处罚记录',
           subtitle: '处罚动作留痕与复核管理',
           permission: 'penalties:view',
+        },
+      },
+      {
+        path: 'notifications',
+        name: 'notifications',
+        component: () => import('../views/operations/NotificationCenterView.vue'),
+        meta: {
+          title: '通知中心',
+          subtitle: '站内公告与通知模板的统一配置与发布',
+          permission: 'notifications:view',
+        },
+      },
+      {
+        path: 'rules',
+        name: 'rules',
+        component: () => import('../views/security/RuleCenterView.vue'),
+        meta: {
+          title: '审核策略',
+          subtitle: '岗位与企业审核规则配置管理',
+          permission: 'rules:view',
+        },
+      },
+      {
+        path: 'logs',
+        name: 'logs',
+        component: () => import('../views/security/SystemLogsView.vue'),
+        meta: {
+          title: '系统日志',
+          subtitle: '关键操作日志与登录审计查询',
+          permission: 'logs:view',
         },
       },
       {
@@ -111,7 +161,7 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore(pinia)
   const isLoggedIn = authStore.isAuthenticated
 
@@ -121,6 +171,20 @@ router.beforeEach((to) => {
       query: {
         redirect: to.fullPath,
       },
+    }
+  }
+
+  if (to.meta.requiresAuth && isLoggedIn) {
+    try {
+      await authStore.refreshMe()
+    } catch {
+      await authStore.logout()
+      return {
+        path: '/login',
+        query: {
+          redirect: to.fullPath,
+        },
+      }
     }
   }
 
