@@ -1,0 +1,51 @@
+export const adminNavItems = [
+  {
+    key: 'dashboard',
+    label: '运营看板',
+    icon: 'BK',
+    path: '/admin/dashboard',
+    permission: 'dashboard:view',
+  },
+  {
+    key: 'enterprise-audit',
+    label: '企业资质审核',
+    icon: 'QY',
+    path: '/admin/enterprise-audit',
+    permission: 'enterpriseAudit:view',
+  },
+  {
+    key: 'job-audit',
+    label: '岗位审核',
+    icon: 'GW',
+    path: '/admin/job-audit',
+    permission: 'jobAudit:view',
+  },
+  {
+    key: 'users',
+    label: '用户管理',
+    icon: 'YH',
+    path: '/admin/users',
+    permission: 'users:view',
+  },
+  {
+    key: 'reports',
+    label: '举报处理',
+    icon: 'JB',
+    path: '/admin/reports',
+    permission: 'reports:view',
+  },
+  {
+    key: 'penalties',
+    label: '处罚记录',
+    icon: 'CF',
+    path: '/admin/penalties',
+    permission: 'penalties:view',
+  },
+  {
+    key: 'permissions',
+    label: '权限中心',
+    icon: 'RB',
+    path: '/admin/permissions',
+    permission: 'permissions:view',
+  },
+]
