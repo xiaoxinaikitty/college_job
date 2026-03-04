@@ -174,6 +174,18 @@ X-User-Id: 1
 #### 3.4.1 我的会话列表
 - `GET /api/student/chats`
 
+返回字段示例：
+```json
+{
+  "id": 9001,
+  "applicationId": 3001,
+  "enterpriseId": 4001,
+  "counterpartName": "示例科技有限公司",
+  "lastMessageAt": "2026-03-03T14:30:00",
+  "status": 1
+}
+```
+
 #### 3.4.2 会话消息列表
 - `GET /api/student/chats/{conversationId}/messages`
 
@@ -383,6 +395,18 @@ X-User-Id: 2
 - `GET /api/enterprise/chats` 我的会话列表
 - `GET /api/enterprise/chats/{conversationId}/messages` 会话消息列表
 - `POST /api/enterprise/chats/{conversationId}/messages` 发送消息
+
+企业会话列表返回字段示例：
+```json
+{
+  "id": 9001,
+  "applicationId": 3001,
+  "studentUserId": 1001,
+  "counterpartName": "张三",
+  "lastMessageAt": "2026-03-03T14:30:00",
+  "status": 1
+}
+```
 
 ### 4.5 面试模块
 - `POST /api/enterprise/interviews` 安排面试

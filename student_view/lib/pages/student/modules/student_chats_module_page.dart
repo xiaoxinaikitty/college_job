@@ -32,23 +32,53 @@ class StudentChatsModulePage extends StatelessWidget {
               itemBuilder: (_, index) {
                 final chat = vm.conversations[index];
                 final id = _toInt(chat['id']);
+                final title = _toText(chat['counterpartName']);
+                final unread = id == null ? 0 : vm.unreadOfConversation(id);
                 return Card(
                   child: ListTile(
-                    title: Text('会话 #${_toText(chat['id'])}'),
-                    subtitle: Text('投递ID: ${_toText(chat['applicationId'])}'),
-                    trailing: const Icon(Icons.chevron_right),
+                    title: Text(title == '-' ? '企业' : title),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (unread > 0) _unreadBadge(unread),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: id == null
                         ? null
-                        : () {
-                            Navigator.push(
+                        : () async {
+                            final cid = id;
+                            if (cid == null) {
+                              return;
+                            }
+                            await _safeAction(
+                              context,
+                              () => vm.markConversationRead(cid),
+                            );
+                            if (!context.mounted) {
+                              return;
+                            }
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => StudentChatPage(
                                   baseUrl: baseUrl,
                                   userId: userId,
-                                  conversationId: id,
+                                  conversationId: cid,
+                                  title: title == '-' ? '企业' : title,
                                 ),
                               ),
+                            );
+                            if (!context.mounted) {
+                              return;
+                            }
+                            await _safeAction(
+                              context,
+                              () async {
+                                await vm.markConversationRead(cid);
+                                await vm.loadConversations();
+                              },
                             );
                           },
                   ),
@@ -68,5 +98,43 @@ class StudentChatsModulePage extends StatelessWidget {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  Widget _unreadBadge(int count) {
+    final text = count > 99 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE53935),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _safeAction(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (e) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(e.toString()), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 }

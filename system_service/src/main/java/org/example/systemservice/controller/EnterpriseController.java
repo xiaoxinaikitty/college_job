@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import org.example.systemservice.common.ApiResponse;
 import org.example.systemservice.dto.enterprise.*;
 import org.example.systemservice.dto.student.SendMessageRequest;
-import org.example.systemservice.entity.Conversation;
 import org.example.systemservice.entity.JobApplication;
 import org.example.systemservice.entity.JobPosting;
 import org.example.systemservice.entity.Message;
@@ -118,7 +117,7 @@ public class EnterpriseController {
     }
 
     @GetMapping("/chats")
-    public ApiResponse<List<Conversation>> listConversations(
+    public ApiResponse<List<Map<String, Object>>> listConversations(
             @RequestHeader("X-User-Id") Long enterpriseUserId
     ) {
         return ApiResponse.success(enterpriseService.listConversations(enterpriseUserId));

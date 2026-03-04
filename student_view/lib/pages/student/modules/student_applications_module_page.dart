@@ -62,7 +62,7 @@ class StudentApplicationsModulePage extends StatelessWidget {
       }
       await showDialog<void>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('状态流转日志'),
           content: SizedBox(
             width: double.maxFinite,
@@ -86,7 +86,7 @@ class StudentApplicationsModulePage extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('关闭'),
             ),
           ],

@@ -303,9 +303,15 @@ class StudentProfileModulePage extends StatelessWidget {
     final appIdCtl = TextEditingController();
     final enterpriseIdCtl = TextEditingController();
     final contentCtl = TextEditingController();
+    if (!context.mounted) {
+      appIdCtl.dispose();
+      enterpriseIdCtl.dispose();
+      contentCtl.dispose();
+      return;
+    }
     await showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('提交评价'),
         content: SingleChildScrollView(
           child: Column(
@@ -333,7 +339,7 @@ class StudentProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -347,7 +353,10 @@ class StudentProfileModulePage extends StatelessWidget {
                 onMessage('请填写完整且合法的数据');
                 return;
               }
-              Navigator.pop(context);
+              if (dialogContext.mounted) {
+                FocusScope.of(dialogContext).unfocus();
+                Navigator.of(dialogContext).pop();
+              }
               await _runAction(
                 () => vm.createReview(
                   applicationId: applicationId,
@@ -363,14 +372,22 @@ class StudentProfileModulePage extends StatelessWidget {
         ],
       ),
     );
+    appIdCtl.dispose();
+    enterpriseIdCtl.dispose();
+    contentCtl.dispose();
   }
 
   Future<void> _createReport(BuildContext context) async {
     final targetIdCtl = TextEditingController();
     final reasonCtl = TextEditingController();
+    if (!context.mounted) {
+      targetIdCtl.dispose();
+      reasonCtl.dispose();
+      return;
+    }
     await showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('提交举报'),
         content: SingleChildScrollView(
           child: Column(
@@ -392,7 +409,7 @@ class StudentProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -403,7 +420,10 @@ class StudentProfileModulePage extends StatelessWidget {
                 onMessage('请填写完整且合法的数据');
                 return;
               }
-              Navigator.pop(context);
+              if (dialogContext.mounted) {
+                FocusScope.of(dialogContext).unfocus();
+                Navigator.of(dialogContext).pop();
+              }
               await _runAction(
                 () => vm.createReport(
                   targetType: 1,
@@ -418,6 +438,8 @@ class StudentProfileModulePage extends StatelessWidget {
         ],
       ),
     );
+    targetIdCtl.dispose();
+    reasonCtl.dispose();
   }
 
   String _extractBaseName(String fileName) {

@@ -156,7 +156,7 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
     }
     await showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(_toText(job['title'])),
         content: SingleChildScrollView(
           child: Column(
@@ -182,7 +182,7 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('关闭'),
           ),
         ],
@@ -191,18 +191,21 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
   }
 
   Future<void> _offlineJob(int jobId) async {
+    if (!mounted) {
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('下线岗位'),
         content: const Text('确认下线该岗位吗？下线后学生将不可继续投递。'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF128C53)),
             child: const Text('确认下线'),
@@ -218,6 +221,9 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
   }
 
   Future<void> _openJobEditor({Map<String, dynamic>? job}) async {
+    if (!mounted) {
+      return;
+    }
     final titleCtl = TextEditingController(text: _rawText(job?['title']));
     final categoryCtl = TextEditingController(text: _rawText(job?['category']));
     final cityCtl = TextEditingController(text: _rawText(job?['city']));
@@ -248,7 +254,7 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
                 16,
                 12,
                 16,
-                16 + MediaQuery.of(ctx).viewInsets.bottom,
+                16 + MediaQuery.viewInsetsOf(ctx).bottom,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -390,6 +396,7 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
                                 if (!ctx.mounted) {
                                   return;
                                 }
+                                FocusScope.of(ctx).unfocus();
                                 Navigator.pop(ctx, true);
                               } catch (e) {
                                 widget.onMessage(e.toString());
@@ -411,6 +418,15 @@ class _EnterpriseJobsModulePageState extends State<EnterpriseJobsModulePage> {
         });
       },
     );
+    titleCtl.dispose();
+    categoryCtl.dispose();
+    cityCtl.dispose();
+    salaryMinCtl.dispose();
+    salaryMaxCtl.dispose();
+    internshipMonthsCtl.dispose();
+    educationCtl.dispose();
+    descCtl.dispose();
+    reqCtl.dispose();
 
     if (saved == true) {
       widget.onMessage(job == null ? '岗位发布成功' : '岗位更新成功');

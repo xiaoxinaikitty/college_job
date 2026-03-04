@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/auth_payload.dart';
@@ -27,6 +29,11 @@ class StudentHomeViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _interviews = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reviews = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _reports = <Map<String, dynamic>>[];
+  Map<int, int> _conversationUnread = <int, int>{};
+  Map<int, int> _conversationLastReadMessageId = <int, int>{};
+  Timer? _conversationPollTimer;
+  bool _conversationRefreshing = false;
+  bool _disposed = false;
   final Map<int, Map<String, dynamic>> _interviewConfirmStates =
       <int, Map<String, dynamic>>{};
 
@@ -43,15 +50,23 @@ class StudentHomeViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> get interviews => _interviews;
   List<Map<String, dynamic>> get reviews => _reviews;
   List<Map<String, dynamic>> get reports => _reports;
+  int get unreadMessageCount =>
+      _conversationUnread.values.fold(0, (sum, item) => sum + item);
+
+  int unreadOfConversation(int conversationId) =>
+      _conversationUnread[conversationId] ?? 0;
 
   void setTabIndex(int index) {
     _tabIndex = index;
-    notifyListeners();
+    _notifySafely();
+    if (index == 2) {
+      loadConversations().catchError((_) {});
+    }
   }
 
   Future<void> bootstrap() async {
     _initialLoading = true;
-    notifyListeners();
+    _notifySafely();
     try {
       await Future.wait([
         loadJobs(),
@@ -65,7 +80,8 @@ class StudentHomeViewModel extends ChangeNotifier {
       ]);
     } finally {
       _initialLoading = false;
-      notifyListeners();
+      _notifySafely();
+      _startConversationPolling();
     }
   }
 
@@ -80,7 +96,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       size: 20,
     );
     _jobs = pageResult.records;
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<Map<String, dynamic>> jobDetail(int jobId) {
@@ -92,7 +108,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<Map<String, dynamic>> applicationDetail(int applicationId) {
@@ -104,11 +120,41 @@ class StudentHomeViewModel extends ChangeNotifier {
   }
 
   Future<void> loadConversations() async {
-    _conversations = await _service.listChats(
+    if (_conversationRefreshing || _disposed) {
+      return;
+    }
+    _conversationRefreshing = true;
+    try {
+      _conversations = await _service.listChats(
+        baseUrl: baseUrl,
+        userId: userId,
+      );
+      final activeConversationIds = _conversations
+          .map((item) => _toInt(item['id']))
+          .whereType<int>()
+          .toSet();
+      _conversationUnread.removeWhere((conversationId, _) =>
+          !activeConversationIds.contains(conversationId));
+      _conversationLastReadMessageId.removeWhere(
+        (conversationId, _) => !activeConversationIds.contains(conversationId),
+      );
+      await _refreshConversationUnread();
+    } finally {
+      _conversationRefreshing = false;
+    }
+    _notifySafely();
+  }
+
+  Future<void> markConversationRead(int conversationId) async {
+    final messages = await _service.listMessages(
       baseUrl: baseUrl,
       userId: userId,
+      conversationId: conversationId,
     );
-    notifyListeners();
+    _conversationLastReadMessageId[conversationId] =
+        _latestIncomingMessageId(messages);
+    _conversationUnread[conversationId] = 0;
+    _notifySafely();
   }
 
   Future<List<Map<String, dynamic>>> listMessages(int conversationId) {
@@ -137,7 +183,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<void> createResume({
@@ -227,7 +273,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<void> offerDecision({
@@ -259,7 +305,7 @@ class StudentHomeViewModel extends ChangeNotifier {
         _interviews.map((item) => _toInt(item['id'])).whereType<int>().toSet();
     _interviewConfirmStates
         .removeWhere((interviewId, _) => !interviewIds.contains(interviewId));
-    notifyListeners();
+    _notifySafely();
   }
 
   Map<String, dynamic>? interviewConfirmState(int interviewId) {
@@ -285,7 +331,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       'expectedRescheduleAt': expectedRescheduleAt?.toIso8601String(),
       'submittedAt': DateTime.now().toIso8601String(),
     };
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<void> loadReviews() async {
@@ -293,7 +339,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<void> createReview({
@@ -320,7 +366,7 @@ class StudentHomeViewModel extends ChangeNotifier {
       baseUrl: baseUrl,
       userId: userId,
     );
-    notifyListeners();
+    _notifySafely();
   }
 
   Future<void> createReport({
@@ -364,12 +410,111 @@ class StudentHomeViewModel extends ChangeNotifier {
 
   Future<void> _runBusy(Future<void> Function() action) async {
     _busy = true;
-    notifyListeners();
+    _notifySafely();
     try {
       await action();
     } finally {
       _busy = false;
-      notifyListeners();
+      _notifySafely();
     }
+  }
+
+  Future<void> _refreshConversationUnread() async {
+    final nextUnread = <int, int>{};
+    for (final item in _conversations) {
+      final conversationId = _toInt(item['id']);
+      if (conversationId == null) {
+        continue;
+      }
+      List<Map<String, dynamic>> messages;
+      try {
+        messages = await _service.listMessages(
+          baseUrl: baseUrl,
+          userId: userId,
+          conversationId: conversationId,
+        );
+      } catch (_) {
+        nextUnread[conversationId] = _conversationUnread[conversationId] ?? 0;
+        continue;
+      }
+
+      if (!_conversationLastReadMessageId.containsKey(conversationId)) {
+        // No server-side read state. Use latest outgoing message as baseline.
+        // This allows newly received replies to show unread red dots.
+        _conversationLastReadMessageId[conversationId] =
+            _latestOutgoingMessageId(messages);
+      }
+
+      final lastReadId = _conversationLastReadMessageId[conversationId] ?? 0;
+      int unread = 0;
+      for (final message in messages) {
+        final senderId = _toInt(message['senderUserId']);
+        final messageOrder = _messageOrderValue(message);
+        if (senderId != userId && messageOrder > lastReadId) {
+          unread++;
+        }
+      }
+      nextUnread[conversationId] = unread;
+    }
+    _conversationUnread = nextUnread;
+  }
+
+  int _latestIncomingMessageId(List<Map<String, dynamic>> messages) {
+    int latestIncomingId = 0;
+    for (final message in messages) {
+      final senderId = _toInt(message['senderUserId']);
+      final messageOrder = _messageOrderValue(message);
+      if (senderId != userId && messageOrder > latestIncomingId) {
+        latestIncomingId = messageOrder;
+      }
+    }
+    return latestIncomingId;
+  }
+
+  int _latestOutgoingMessageId(List<Map<String, dynamic>> messages) {
+    int latestOutgoingId = 0;
+    for (final message in messages) {
+      final senderId = _toInt(message['senderUserId']);
+      final messageOrder = _messageOrderValue(message);
+      if (senderId == userId && messageOrder > latestOutgoingId) {
+        latestOutgoingId = messageOrder;
+      }
+    }
+    return latestOutgoingId;
+  }
+
+  void _startConversationPolling() {
+    _conversationPollTimer?.cancel();
+    _conversationPollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (_disposed) {
+        return;
+      }
+      loadConversations().catchError((_) {});
+    });
+  }
+
+  void _notifySafely() {
+    if (_disposed) {
+      return;
+    }
+    notifyListeners();
+  }
+
+  int _messageOrderValue(Map<String, dynamic> message) {
+    final id = _toInt(message['id']) ?? 0;
+    final sentAtRaw = message['sentAt']?.toString();
+    final sentAt = sentAtRaw == null ? null : DateTime.tryParse(sentAtRaw);
+    if (sentAt == null) {
+      return id;
+    }
+    final micros = sentAt.toUtc().microsecondsSinceEpoch;
+    return micros * 1000000 + (id % 1000000);
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _conversationPollTimer?.cancel();
+    super.dispose();
   }
 }

@@ -253,9 +253,20 @@ class EnterpriseProfileModulePage extends StatelessWidget {
     final logoCtl = TextEditingController(text: _rawText(profile['logoUrl']));
     final introCtl = TextEditingController(text: _rawText(profile['intro']));
 
+    if (!context.mounted) {
+      enterpriseNameCtl.dispose();
+      creditCtl.dispose();
+      industryCtl.dispose();
+      cityCtl.dispose();
+      addressCtl.dispose();
+      websiteCtl.dispose();
+      logoCtl.dispose();
+      introCtl.dispose();
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('编辑企业资料'),
         content: SizedBox(
           width: 480,
@@ -303,7 +314,7 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -324,10 +335,11 @@ class EnterpriseProfileModulePage extends StatelessWidget {
                   'logoUrl': _nullable(logoCtl.text),
                   'intro': _nullable(introCtl.text),
                 });
-                if (!context.mounted) {
+                if (!dialogContext.mounted) {
                   return;
                 }
-                Navigator.pop(context, true);
+                FocusScope.of(dialogContext).unfocus();
+                Navigator.of(dialogContext).pop(true);
               } catch (e) {
                 onMessage(e.toString());
               }
@@ -339,6 +351,14 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ],
       ),
     );
+    enterpriseNameCtl.dispose();
+    creditCtl.dispose();
+    industryCtl.dispose();
+    cityCtl.dispose();
+    addressCtl.dispose();
+    websiteCtl.dispose();
+    logoCtl.dispose();
+    introCtl.dispose();
 
     if (saved == true) {
       onMessage('企业资料更新成功');
@@ -348,9 +368,14 @@ class EnterpriseProfileModulePage extends StatelessWidget {
   Future<void> _openCertificationSubmit(BuildContext context) async {
     final urlCtl = TextEditingController();
     final remarkCtl = TextEditingController();
+    if (!context.mounted) {
+      urlCtl.dispose();
+      remarkCtl.dispose();
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('提交企业认证'),
         content: SizedBox(
           width: 460,
@@ -376,7 +401,7 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -391,10 +416,11 @@ class EnterpriseProfileModulePage extends StatelessWidget {
                   licenseFileUrl: url,
                   submitRemark: _nullable(remarkCtl.text),
                 );
-                if (!context.mounted) {
+                if (!dialogContext.mounted) {
                   return;
                 }
-                Navigator.pop(context, true);
+                FocusScope.of(dialogContext).unfocus();
+                Navigator.of(dialogContext).pop(true);
               } catch (e) {
                 onMessage(e.toString());
               }
@@ -406,6 +432,8 @@ class EnterpriseProfileModulePage extends StatelessWidget {
         ],
       ),
     );
+    urlCtl.dispose();
+    remarkCtl.dispose();
     if (saved == true) {
       onMessage('企业认证已提交，等待管理员审核');
     }

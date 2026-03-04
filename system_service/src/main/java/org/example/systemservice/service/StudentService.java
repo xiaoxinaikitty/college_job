@@ -364,9 +364,25 @@ public class StudentService {
         return map;
     }
 
-    public List<Conversation> listConversations(Long studentUserId) {
+    public List<Map<String, Object>> listConversations(Long studentUserId) {
         validateStudent(studentUserId);
-        return conversationRepository.findByStudentUserIdOrderByUpdatedAtDesc(studentUserId);
+        List<Conversation> conversations = conversationRepository.findByStudentUserIdOrderByUpdatedAtDesc(studentUserId);
+        Map<Long, Enterprise> enterpriseMap = enterpriseRepository.findAllById(
+                        conversations.stream().map(Conversation::getEnterpriseId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(Enterprise::getId, it -> it));
+
+        return conversations.stream().map(conversation -> {
+            Enterprise enterprise = enterpriseMap.get(conversation.getEnterpriseId());
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", conversation.getId());
+            map.put("applicationId", conversation.getApplicationId());
+            map.put("enterpriseId", conversation.getEnterpriseId());
+            map.put("counterpartName", enterpriseNameOf(enterprise));
+            map.put("lastMessageAt", conversation.getLastMessageAt());
+            map.put("status", conversation.getStatus());
+            return map;
+        }).collect(Collectors.toList());
     }
 
     public List<Message> listMessages(Long studentUserId, Long conversationId) {
@@ -701,6 +717,16 @@ public class StudentService {
             return "无法参加";
         }
         return "未知";
+    }
+
+    private String enterpriseNameOf(Enterprise enterprise) {
+        if (enterprise != null && enterprise.getEnterpriseName() != null) {
+            String name = enterprise.getEnterpriseName().trim();
+            if (!name.isEmpty()) {
+                return name;
+            }
+        }
+        return "企业";
     }
 
     private Map<String, Object> buildInterviewConfirmView(

@@ -121,7 +121,7 @@ public class StudentController {
     }
 
     @GetMapping("/chats")
-    public ApiResponse<List<Conversation>> listConversations(
+    public ApiResponse<List<Map<String, Object>>> listConversations(
             @RequestHeader("X-User-Id") Long studentUserId
     ) {
         return ApiResponse.success(studentService.listConversations(studentUserId));

@@ -360,9 +360,25 @@ public class EnterpriseService {
         return application;
     }
 
-    public List<Conversation> listConversations(Long enterpriseUserId) {
+    public List<Map<String, Object>> listConversations(Long enterpriseUserId) {
         Enterprise enterprise = validateEnterprise(enterpriseUserId);
-        return conversationRepository.findByEnterpriseIdOrderByUpdatedAtDesc(enterprise.getId());
+        List<Conversation> conversations = conversationRepository.findByEnterpriseIdOrderByUpdatedAtDesc(enterprise.getId());
+        Map<Long, User> studentMap = userRepository.findAllById(
+                        conversations.stream().map(Conversation::getStudentUserId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(User::getId, it -> it));
+
+        return conversations.stream().map(conversation -> {
+            User student = studentMap.get(conversation.getStudentUserId());
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", conversation.getId());
+            map.put("applicationId", conversation.getApplicationId());
+            map.put("studentUserId", conversation.getStudentUserId());
+            map.put("counterpartName", studentDisplayName(student));
+            map.put("lastMessageAt", conversation.getLastMessageAt());
+            map.put("status", conversation.getStatus());
+            return map;
+        }).collect(Collectors.toList());
     }
 
     public List<Message> listMessages(Long enterpriseUserId, Long conversationId) {
@@ -878,6 +894,16 @@ public class EnterpriseService {
             return user.getNickname().trim();
         }
         return "学生#" + user.getId();
+    }
+
+    private String studentDisplayName(User user) {
+        if (user == null) {
+            return "学生";
+        }
+        if (user.getNickname() != null && !user.getNickname().trim().isEmpty()) {
+            return user.getNickname().trim();
+        }
+        return "学生";
     }
 
     private String normalize(String value) {

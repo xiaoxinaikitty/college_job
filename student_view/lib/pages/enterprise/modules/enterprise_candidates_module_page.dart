@@ -304,7 +304,7 @@ class _EnterpriseCandidatesModulePageState
       }
       await showDialog<void>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('候选人详情'),
           content: SizedBox(
             width: 520,
@@ -330,7 +330,7 @@ class _EnterpriseCandidatesModulePageState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('关闭'),
             ),
           ],
@@ -345,6 +345,11 @@ class _EnterpriseCandidatesModulePageState
     int toStatus = 2;
     final rejectCtl = TextEditingController();
     final noteCtl = TextEditingController();
+    if (!mounted) {
+      rejectCtl.dispose();
+      noteCtl.dispose();
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (ctx, setLocal) {
@@ -402,6 +407,7 @@ class _EnterpriseCandidatesModulePageState
                     note: _nullable(noteCtl.text),
                   );
                   if (ctx.mounted) {
+                    FocusScope.of(ctx).unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -417,6 +423,8 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
+    rejectCtl.dispose();
+    noteCtl.dispose();
     if (saved == true) {
       widget.onMessage('候选人状态更新成功');
     }
@@ -429,6 +437,13 @@ class _EnterpriseCandidatesModulePageState
     final meetingCtl = TextEditingController();
     final locationCtl = TextEditingController();
     final remarkCtl = TextEditingController();
+    if (!mounted) {
+      durationCtl.dispose();
+      meetingCtl.dispose();
+      locationCtl.dispose();
+      remarkCtl.dispose();
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (ctx, setLocal) {
@@ -519,6 +534,7 @@ class _EnterpriseCandidatesModulePageState
                     'remark': _nullable(remarkCtl.text),
                   });
                   if (ctx.mounted) {
+                    FocusScope.of(ctx).unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -534,6 +550,10 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
+    durationCtl.dispose();
+    meetingCtl.dispose();
+    locationCtl.dispose();
+    remarkCtl.dispose();
     if (saved == true) {
       widget.onMessage('面试安排成功');
     }
@@ -543,6 +563,12 @@ class _EnterpriseCandidatesModulePageState
     final minCtl = TextEditingController();
     final maxCtl = TextEditingController();
     final termCtl = TextEditingController();
+    if (!mounted) {
+      minCtl.dispose();
+      maxCtl.dispose();
+      termCtl.dispose();
+      return;
+    }
     DateTime? startDate;
     DateTime? endDate;
     DateTime? expireAt;
@@ -639,6 +665,7 @@ class _EnterpriseCandidatesModulePageState
             ),
             FilledButton(
               onPressed: () {
+                FocusScope.of(ctx).unfocus();
                 Navigator.pop(ctx, <String, dynamic>{
                   'applicationId': applicationId,
                   'salaryMin': double.tryParse(minCtl.text.trim()),
@@ -659,6 +686,9 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
+    minCtl.dispose();
+    maxCtl.dispose();
+    termCtl.dispose();
 
     if (payload == null) {
       return;
@@ -675,6 +705,10 @@ class _EnterpriseCandidatesModulePageState
   Future<void> _openInterviewResultDialog(int interviewId) async {
     String result = 'pass';
     final noteCtl = TextEditingController();
+    if (!mounted) {
+      noteCtl.dispose();
+      return;
+    }
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (ctx, setLocal) {
@@ -720,6 +754,7 @@ class _EnterpriseCandidatesModulePageState
                     note: _nullable(noteCtl.text),
                   );
                   if (ctx.mounted) {
+                    FocusScope.of(ctx).unfocus();
                     Navigator.pop(ctx, true);
                   }
                 } catch (e) {
@@ -735,6 +770,7 @@ class _EnterpriseCandidatesModulePageState
         );
       }),
     );
+    noteCtl.dispose();
     if (saved == true) {
       widget.onMessage('面试结果提交成功');
     }
@@ -766,6 +802,9 @@ class _EnterpriseCandidatesModulePageState
   }
 
   Future<DateTime?> _pickDateTime() async {
+    if (!mounted) {
+      return null;
+    }
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
@@ -780,13 +819,16 @@ class _EnterpriseCandidatesModulePageState
       context: context,
       initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
     );
-    if (time == null) {
+    if (time == null || !mounted) {
       return null;
     }
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
   Future<DateTime?> _pickDate() async {
+    if (!mounted) {
+      return null;
+    }
     final now = DateTime.now();
     return showDatePicker(
       context: context,

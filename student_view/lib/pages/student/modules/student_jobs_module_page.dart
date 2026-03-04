@@ -106,12 +106,12 @@ class _StudentJobsModulePageState extends State<StudentJobsModulePage> {
       }
       await showDialog<void>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Text(_toText(detail['title'])),
           content: Text(_toText(detail['description'])),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('关闭'),
             ),
           ],

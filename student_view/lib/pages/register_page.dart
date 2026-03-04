@@ -317,6 +317,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final targetRoute = payload.userType == AccountRole.enterprise.userType
           ? AppRoutes.enterpriseHome
           : AppRoutes.studentHome;
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pushReplacementNamed(
         context,
         targetRoute,
@@ -337,6 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _gotoLogin() {
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.pushReplacementNamed(
       context,
       AppRoutes.login,

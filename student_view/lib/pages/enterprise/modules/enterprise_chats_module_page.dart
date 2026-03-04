@@ -30,33 +30,50 @@ class EnterpriseChatsModulePage extends StatelessWidget {
               itemBuilder: (_, index) {
                 final chat = vm.conversations[index];
                 final id = _toInt(chat['id']);
-                final studentUserId = _toText(chat['studentUserId']);
-                final subtitle = '申请ID: ${_toText(chat['applicationId'])}';
+                final title = _toText(chat['counterpartName']);
+                final unread = id == null ? 0 : vm.unreadOfConversation(id);
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    title: Text('学生 $studentUserId'),
-                    subtitle: Text(subtitle),
-                    trailing: const Icon(Icons.chevron_right),
+                    title: Text(title == '-' ? '学生' : title),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (unread > 0) _unreadBadge(unread),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                     onTap: id == null
                         ? null
                         : () async {
+                            final cid = id;
+                            if (cid == null) {
+                              return;
+                            }
+                            await _safeAction(
+                                () => vm.markConversationRead(cid));
+                            if (!context.mounted) {
+                              return;
+                            }
                             await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => EnterpriseChatPage(
                                   baseUrl: vm.baseUrl,
                                   userId: vm.userId,
-                                  conversationId: id,
-                                  title: '会话 #$id',
+                                  conversationId: cid,
+                                  title: title == '-' ? '学生' : title,
                                 ),
                               ),
                             );
-                            try {
-                              await vm.loadConversations();
-                            } catch (e) {
-                              onMessage(e.toString());
+                            if (!context.mounted) {
+                              return;
                             }
+                            await _safeAction(() async {
+                              await vm.markConversationRead(cid);
+                              await vm.loadConversations();
+                            });
                           },
                   ),
                 );
@@ -75,5 +92,34 @@ class EnterpriseChatsModulePage extends StatelessWidget {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  Widget _unreadBadge(int count) {
+    final text = count > 99 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE53935),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _safeAction(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      onMessage(e.toString());
+    }
   }
 }

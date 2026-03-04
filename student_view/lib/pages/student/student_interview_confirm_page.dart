@@ -189,7 +189,7 @@ class _StudentInterviewConfirmPageState
       context: context,
       initialTime: TimeOfDay.fromDateTime(_expectedAt ?? now),
     );
-    if (time == null) {
+    if (time == null || !mounted) {
       return;
     }
     setState(() {
@@ -225,6 +225,7 @@ class _StudentInterviewConfirmPageState
       if (!mounted) {
         return;
       }
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context, true);
     } catch (e) {
       widget.onMessage(e.toString());
@@ -252,7 +253,7 @@ class _StudentInterviewConfirmPageState
     if (dt == null) {
       return raw;
     }
-    final local =  dt.toLocal();
+    final local = dt.toLocal();
     return '${local.year}-${_two(local.month)}-${_two(local.day)} '
         '${_two(local.hour)}:${_two(local.minute)}';
   }

@@ -8,11 +8,13 @@ class StudentChatPage extends StatefulWidget {
     required this.baseUrl,
     required this.userId,
     required this.conversationId,
+    this.title,
   });
 
   final String baseUrl;
   final int userId;
   final int conversationId;
+  final String? title;
 
   @override
   State<StudentChatPage> createState() => _StudentChatPageState();
@@ -54,7 +56,8 @@ class _StudentChatPageState extends State<StudentChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('会话 #${widget.conversationId}')),
+      appBar:
+          AppBar(title: Text(widget.title ?? '会话 #${widget.conversationId}')),
       body: Column(
         children: [
           Expanded(

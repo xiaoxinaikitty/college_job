@@ -90,14 +90,14 @@ class _StudentHomePageState extends State<StudentHomePage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _vm.tabIndex,
         onDestinationSelected: _vm.setTabIndex,
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.work_outline), label: '岗位'),
           NavigationDestination(
             icon: Icon(Icons.assignment_outlined),
             label: '投递',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
+            icon: _badgeIcon(_vm.unreadMessageCount, Icons.chat_bubble_outline),
             label: '消息',
           ),
           NavigationDestination(icon: Icon(Icons.person_outline), label: '我的'),
@@ -137,6 +137,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
   }
 
   void _logout() {
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.pushNamedAndRemoveUntil(
       context,
       AppRoutes.login,
@@ -154,6 +155,18 @@ class _StudentHomePageState extends State<StudentHomePage> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Widget _badgeIcon(int count, IconData icon) {
+    if (count <= 0) {
+      return Icon(icon);
+    }
+    final text = count > 99 ? '99+' : '$count';
+    return Badge(
+      label: Text(text, style: const TextStyle(fontSize: 10)),
+      backgroundColor: const Color(0xFFE53935),
+      child: Icon(icon),
     );
   }
 }
